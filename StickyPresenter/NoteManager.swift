@@ -67,6 +67,7 @@ class NoteManager: ObservableObject {
         panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.worksWhenModal = true
+        panel.isReleasedWhenClosed = false  // Swift ARC와 충돌 방지 (이중 해제 크래시)
         return panel
     }
 
@@ -74,7 +75,7 @@ class NoteManager: ObservableObject {
     private func createTimerWidgetWindow(frame: NSRect) -> NSWindow {
         let window = NSWindow(
             contentRect: frame,
-            styleMask: [.borderless, .fullSizeContentView],
+            styleMask: [.borderless, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -109,6 +110,7 @@ class NoteManager: ObservableObject {
         panel.hasShadow = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.worksWhenModal = true
+        panel.isReleasedWhenClosed = false  // Swift ARC와 충돌 방지 (이중 해제 크래시)
         return panel
     }
 
@@ -218,8 +220,7 @@ class NoteManager: ObservableObject {
         let frame = NSRect(x: x, y: y, width: width, height: height)
         let window = createTimerWidgetWindow(frame: frame)
         window.alphaValue = 1.0
-        window.minSize = NSSize(width: 200, height: 290)
-        window.maxSize = NSSize(width: 200, height: 290)
+        window.minSize = NSSize(width: 140, height: 210)
         window.title = "Timer – \(entry.name)"
 
         let widgetHostingView = NSHostingView(rootView:
@@ -277,7 +278,7 @@ class NoteManager: ObservableObject {
 
         let window = NSWindow(
             contentRect: frame,
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )

@@ -19,6 +19,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var noteManager = NoteManager.shared
     var settingsWindow: NSWindow?
     
+    // 앱이 이미 실행 중인 상태에서 Finder/Launchpad로 다시 열 때 호출
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        noteManager.openTimerList()
+        if !flag { noteManager.showAllNotes() }
+        return true
+    }
+
+    // 창이 모두 닫혀도 메뉴바 앱으로 계속 실행
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         setupGlobalHotkey()

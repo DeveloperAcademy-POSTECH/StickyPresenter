@@ -45,6 +45,12 @@ class TimerEntry: ObservableObject, Identifiable {
         guard !isInvalidated else { return }
         targetSeconds += s
     }
+
+    func subtractSeconds(_ s: TimeInterval = 30) {
+        guard !isInvalidated else { return }
+        elapsed = min(elapsed + s, targetSeconds)
+    }
+
     func addMinute() {
         guard !isInvalidated else { return }
         targetSeconds += 60
@@ -454,7 +460,6 @@ struct TimerRowView: View {
                             .background(Circle().fill(Color.primary.opacity(0.08)))
                     }
                     .buttonStyle(.plain)
-
                 }
 
                 HStack(spacing: 6) {
@@ -590,36 +595,51 @@ struct TimerWidgetView: View {
     let onClose: () -> Void
     @State private var isHovered = false
 
+    private let controlsHeight: CGFloat = 68
+
     private var ringColor: Color {
         if entry.isFinished { return Color(red: 1, green: 0.22, blue: 0.37) }
         return Color.primary.opacity(0.85)
     }
 
-    private let squareSize: CGFloat = 200
-    private let expandedHeight: CGFloat = 290
-
     var body: some View {
-        ZStack(alignment: .top) {
-            // 배경: 호버 시 아래로 늘어남 — 그림자도 이 도형에만 적용
-            backgroundShape
-                .frame(width: squareSize, height: isHovered ? expandedHeight : squareSize)
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isHovered)
+        GeometryReader { geo in
+            // 링은 정사각형: 너비와 (높이 - 컨트롤 영역) 중 작은 쪽에 맞춤
+            let side = max(120, min(geo.size.width, geo.size.height - controlsHeight))
+            let scale = side / 200
 
-            // 링 + 시간: 항상 200×200 정중앙
-            ringContent
-                .frame(width: squareSize, height: squareSize)
+            ZStack(alignment: .top) {
+                // 배경: 호버 시 아래로 늘어남
+                backgroundShape
+                    .frame(width: geo.size.width, height: isHovered ? geo.size.height : side)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isHovered)
 
-            // 컨트롤: 늘어난 하단 영역에 배치
-            VStack {
-                Spacer().frame(height: squareSize)
-                controlsBar
-                    .frame(height: expandedHeight - squareSize)
+                // 링 + 시간
+                ringContent(side: side, scale: scale)
+                    .frame(width: geo.size.width, height: side)
+
+                // 컨트롤: 링 아래 고정 영역
+                VStack(spacing: 0) {
+                    Spacer().frame(height: side)
+                    controlsBar
+                        .frame(maxWidth: .infinity)
+                        .frame(height: controlsHeight)
+                }
+                .frame(width: geo.size.width, height: side + controlsHeight)
+                .opacity(isHovered ? 1 : 0)
+                .animation(.easeInOut(duration: 0.2), value: isHovered)
+
+                // 리사이즈 그립 힌트 (호버 시)
+                if isHovered {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .padding(6)
+                        .transition(.opacity)
+                }
             }
-            .frame(height: expandedHeight)
-            .opacity(isHovered ? 1 : 0)
-            .animation(.easeInOut(duration: 0.2), value: isHovered)
         }
-        .frame(width: squareSize, height: expandedHeight)
         .onHover { hovering in
             withAnimation { isHovered = hovering }
         }
@@ -631,21 +651,21 @@ struct TimerWidgetView: View {
             .fill(Color(NSColor.windowBackgroundColor))
     }
 
-    // MARK: - Ring + Time
-    private var ringContent: some View {
+    // MARK: - Ring + Time (scale에 비례)
+    private func ringContent(side: CGFloat, scale: CGFloat) -> some View {
         ZStack {
             Circle()
-                .stroke(Color.primary.opacity(0.1), lineWidth: 10)
+                .stroke(Color.primary.opacity(0.1), lineWidth: max(4, 10 * scale))
 
             Circle()
                 .trim(from: 0, to: max(0, 1 - entry.progress))
-                .stroke(ringColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                .stroke(ringColor, style: StrokeStyle(lineWidth: max(4, 10 * scale), lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 1), value: entry.progress)
 
             VStack(spacing: 4) {
                 Text(formatTime(entry.remaining))
-                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .font(.system(size: max(16, 38 * scale), weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                     .monospacedDigit()
                     .contentTransition(.numericText(countsDown: true))
@@ -653,7 +673,7 @@ struct TimerWidgetView: View {
 
                 if !entry.isRunning && !entry.name.isEmpty {
                     Text(entry.name)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: max(9, 11 * scale), weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -661,81 +681,57 @@ struct TimerWidgetView: View {
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: entry.isRunning)
         }
-        .padding(26)
+        .padding(max(12, 26 * scale))
     }
 
-    // MARK: - Controls
+    // MARK: - Controls (고정 크기, 4버튼 동일 36×36)
     private var controlsBar: some View {
-        VStack(spacing: 8) {
-            // Row 1: 타이머 조작 버튼
-            HStack(spacing: 5) {
-                Button(action: {
-                    if entry.isFinished { entry.reset() }
-                    entry.toggleRunning()
-                }) {
-                    Image(systemName: entry.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.primary.opacity(0.09)))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: { entry.addSeconds() }) {
-                    Text("+30s")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Capsule().fill(Color.primary.opacity(0.09)))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: { entry.addMinute() }) {
-                    Text("+1m")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Capsule().fill(Color.primary.opacity(0.09)))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: { entry.reset() }) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.primary.opacity(0.09)))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.primary.opacity(0.09)))
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Row 2: 새 스티키 노트 버튼
-            Button(action: addNewStickyNote) {
-                HStack(spacing: 5) {
-                    Image(systemName: "note.text.badge.plus")
-                        .font(.system(size: 12, weight: .medium))
-                    Text("새 스티키 노트")
-                        .font(.system(size: 11, weight: .medium))
-                }
-                .foregroundStyle(Color(red: 0.95, green: 0.85, blue: 0.40))
-                .frame(maxWidth: .infinity)
-                .frame(height: 26)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(red: 1.0, green: 0.95, blue: 0.70)))
+        HStack(spacing: 10) {
+            // -30s
+            Button(action: { entry.subtractSeconds() }) {
+                Text("-30s")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.primary.opacity(0.09)))
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 14)
+
+            // Play / Pause
+            Button(action: {
+                if entry.isFinished { entry.reset() }
+                entry.toggleRunning()
+            }) {
+                Image(systemName: entry.isRunning ? "pause.fill" : "play.fill")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.primary.opacity(0.1)))
+            }
+            .buttonStyle(.plain)
+
+            // +30s
+            Button(action: { entry.addSeconds() }) {
+                Text("+30s")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.primary.opacity(0.09)))
+            }
+            .buttonStyle(.plain)
+
+            // Close (빨간색)
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color(red: 1, green: 0.27, blue: 0.23)))
+            }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
     }
 
     private func addNewStickyNote() {
