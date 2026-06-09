@@ -13,6 +13,7 @@
 		B5D2738A610477EAFEF6E4E1 /* StickyPresenterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */; };
 		BD8A0E985F4D66222881B1A3 /* NoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF4329275C9703866DAC1970 /* NoteManager.swift */; };
 		F70D0A179ADFB07064549AF1 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */; };
+		AAAA000000000000000000A2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAAA000000000000000000A1 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		EF4329275C9703866DAC1970 /* NoteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteManager.swift; sourceTree = "<group>"; };
 		F1F693E1CBCB5DD0A681806F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AAAA000000000000000000A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -38,6 +40,7 @@
 		7BCAE0F27A18C7ABDB17C839 /* StickyPresenter */ = {
 			isa = PBXGroup;
 			children = (
+				AAAA000000000000000000A1 /* Assets.xcassets */,
 				F1F693E1CBCB5DD0A681806F /* Info.plist */,
 				85B18F240C26BA63598B84FC /* Models.swift */,
 				EF4329275C9703866DAC1970 /* NoteManager.swift */,
@@ -65,6 +68,7 @@
 			buildConfigurationList = E915D4E9C715945511F0DDAB /* Build configuration list for PBXNativeTarget "StickyPresenter" */;
 			buildPhases = (
 				131743CEEF115C44EDB569D2 /* Sources */,
+				AAAA000000000000000000A3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -87,7 +91,6 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					44900E0A1F5605936678A9A9 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -109,6 +112,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AAAA000000000000000000A3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAA000000000000000000A2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		131743CEEF115C44EDB569D2 /* Sources */ = {
@@ -135,7 +149,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = QGAQ3AY3R3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = StickyPresenter/Info.plist;
@@ -218,7 +232,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = QGAQ3AY3R3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = StickyPresenter/Info.plist;

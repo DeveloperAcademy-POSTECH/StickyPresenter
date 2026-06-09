@@ -193,10 +193,10 @@ class NoteManager: ObservableObject {
         }
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let sf = screen.frame
-        let w: CGFloat = 300, h: CGFloat = 380
+        let w: CGFloat = 360, h: CGFloat = 380
         let frame = NSRect(x: sf.maxX - w - 40, y: sf.maxY - h - 80, width: w, height: h)
         let panel = createTimerListPanel(frame: frame)
-        panel.minSize = NSSize(width: 260, height: 220)
+        panel.minSize = NSSize(width: 320, height: 220)
 
         panel.contentView = NSHostingView(rootView: TimerListView(manager: timerListManager))
         panel.orderFront(nil)
@@ -211,24 +211,20 @@ class NoteManager: ObservableObject {
     func showTimerWidget(for entry: TimerEntry) {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let sf = screen.frame
-        let width: CGFloat = 200
-        let height: CGFloat = 290   // 정사각형(200) + 컨트롤 영역(90)
+        let side: CGFloat = 200   // 시간만 표시하는 정사각형 위젯
         let offset = CGFloat(timerWidgetWindows.count) * 24
-        let x = sf.maxX - width - 360 - offset
-        let y = sf.maxY - height - 80 - offset
+        let x = sf.maxX - side - 360 - offset
+        let y = sf.maxY - side - 80 - offset
 
-        let frame = NSRect(x: x, y: y, width: width, height: height)
+        let frame = NSRect(x: x, y: y, width: side, height: side)
         let window = createTimerWidgetWindow(frame: frame)
         window.alphaValue = 1.0
-        window.minSize = NSSize(width: 140, height: 210)
+        window.minSize = NSSize(width: 120, height: 120)
+        window.aspectRatio = NSSize(width: 1, height: 1)  // 정사각 비율 보존
         window.title = "Timer – \(entry.name)"
 
         let widgetHostingView = NSHostingView(rootView:
-            TimerWidgetView(entry: entry, onClose: { [weak self] in
-                DispatchQueue.main.async {
-                    self?.timerListManager.remove(entry)
-                }
-            })
+            TimerWidgetView(entry: entry)
         )
         widgetHostingView.wantsLayer = true
         widgetHostingView.layer?.backgroundColor = CGColor(gray: 0, alpha: 0)
@@ -273,31 +269,36 @@ class NoteManager: ObservableObject {
         }
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let sf = screen.visibleFrame
-        let w: CGFloat = 280, h: CGFloat = 320
-        let frame = NSRect(x: sf.midX - w / 2, y: sf.midY - h / 2, width: w, height: h)
+        let side: CGFloat = 200   // 타이머 콘텐츠 정사각형 크기
+        let frame = NSRect(x: sf.midX - side / 2, y: sf.midY - side / 2, width: side, height: side)
 
+        // 실제 타이틀 윈도우 — 화면 미러링/공유의 "윈도우 추가" 목록에 이름과 함께 잡힘.
+        // fullSizeContentView는 일부러 빼야 콘텐츠(타이머)가 제목표시줄만큼 늘어나지 않고
+        // setContentSize로 지정한 정사각형이 그대로 유지됨.
         let window = NSWindow(
             contentRect: frame,
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
-        window.title = entry.name.isEmpty ? "Timer" : entry.name
+        window.title = entry.name.isEmpty ? "Timer" : "Timer – \(entry.name)"  // 캡처 목록용 이름(보이진 않음)
+        window.contentAspectRatio = NSSize(width: 1, height: 1)  // 콘텐츠를 정사각으로 유지
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
-        window.isOpaque = false
-        window.backgroundColor = .clear
         window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden        // 제목 텍스트 숨김
+        window.isOpaque = false                 // 윗부분(제목표시줄) 투명
+        window.backgroundColor = .clear
         window.sharingType = .readOnly
         window.isReleasedWhenClosed = false  // Swift ARC와 충돌 방지 (이중 해제 크래시)
 
         let hostingView = NSHostingView(rootView:
-            TimerWidgetView(entry: entry, onClose: { [weak window] in
-                DispatchQueue.main.async { window?.close() }
-            })
+            TimerWidgetView(entry: entry)   // 타이틀바 닫기 버튼이 있으므로 onClose 불필요
         )
+        if #available(macOS 13.0, *) { hostingView.sizingOptions = [] }
         window.contentView = hostingView
+        window.setContentSize(NSSize(width: side, height: side))  // 콘텐츠 = 정사각형
         window.orderFront(nil)
         timerPresentationWindows[entry.id] = window
 

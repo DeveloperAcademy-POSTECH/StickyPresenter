@@ -44,7 +44,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
             let screenFrame = NSScreen.main?.visibleFrame ?? .zero
             noteManager.addNote(
-                text: "👋 StickyPresenter 사용법\n\n📌 드래그로 노트 이동\n🖱 마우스 오버 시 컨트롤 표시\n🎨 색상 · 투명도 · 폰트 크기 조절\n🔒 잠금 버튼으로 편집 방지\n\n⌘⌃N  새 스티키 노트\n⌘⌃T  타이머 열기\n⌘⌃P  텔레프롬프터\n⌘⌃S  모든 노트 보기\n⌘⌃H  모든 노트 숨기기\n\n💡 타이머 컨트롤에서도\n   스티키 노트를 바로 만들 수 있어요!",
+                text: "👋 StickyPresenter Guide\n\n📌 Drag to move a note\n🖱 Hover to show controls\n🎨 Adjust color · opacity · font size\n🔒 Lock button prevents editing\n\n⌘⌃N  New sticky note\n⌘⌃T  Open timers\n⌘⌃P  Teleprompter\n⌘⌃S  Show all notes\n⌘⌃H  Hide all notes\n\n💡 You can also create a sticky note\n   right from the timer controls!",
                 color: .yellow,
                 position: CGPoint(x: screenFrame.minX + 60, y: screenFrame.midY - 100)
             )
