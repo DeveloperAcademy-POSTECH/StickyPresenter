@@ -4,6 +4,12 @@
 
 Lucid Notes에서 영감을 받아, Keynote 프레젠테이션 중에도 메모와 대본을 볼 수 있는 플로팅 윈도우 앱입니다.
 
+## 🔗 Links
+
+- 🏠 [Home](https://developeracademy-postech.github.io/StickyPresenter/)
+- 🛟 [Support](https://developeracademy-postech.github.io/StickyPresenter/support.html)
+- 🔒 [Privacy Policy](https://developeracademy-postech.github.io/StickyPresenter/privacy.html)
+
 ## ✨ Features
 
 ### 🗒️ Floating Sticky Notes

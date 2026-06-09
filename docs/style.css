@@ -1,0 +1,74 @@
+:root {
+  --amber-1: #ffdb54;
+  --amber-2: #ff9f0a;
+  --ink: #1c1c1e;
+  --muted: #6b6b70;
+  --bg: #faf8f4;
+  --card: #ffffff;
+  --border: #ececec;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    "Apple SD Gothic Neo", "Pretendard", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.65;
+}
+
+a { color: #e07b00; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 22px; }
+
+/* Header / hero */
+header {
+  background: linear-gradient(160deg, var(--amber-1), var(--amber-2));
+  color: #fff;
+  text-align: center;
+  padding: 56px 22px 48px;
+}
+header .icon {
+  width: 112px; height: 112px; border-radius: 25px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.18);
+}
+header h1 { margin: 18px 0 4px; font-size: 30px; letter-spacing: -0.02em; }
+header p { margin: 0; font-size: 16px; opacity: .95; }
+
+/* Nav buttons */
+.actions { margin-top: 22px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-block; background: rgba(255,255,255,.22); color: #fff;
+  padding: 10px 20px; border-radius: 999px; font-weight: 600; font-size: 15px;
+  border: 1px solid rgba(255,255,255,.5);
+}
+.btn:hover { background: rgba(255,255,255,.34); text-decoration: none; }
+
+/* Content */
+main { padding: 40px 0 64px; }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 26px 28px; margin: 18px 0;
+}
+h2 { font-size: 21px; margin: 8px 0 12px; letter-spacing: -0.01em; }
+h3 { font-size: 16px; margin: 22px 0 6px; color: var(--ink); }
+p, li { font-size: 15.5px; color: #303034; }
+.muted { color: var(--muted); font-size: 14px; }
+ul { padding-left: 20px; }
+li { margin: 4px 0; }
+hr { border: none; border-top: 1px solid var(--border); margin: 26px 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+th { color: var(--muted); font-weight: 600; }
+code { background: #f1efe9; padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+
+.lang { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--amber-2); text-transform: uppercase; }
+
+footer { text-align: center; padding: 30px 22px 50px; color: var(--muted); font-size: 13px; }
+.back { display: inline-block; margin-top: 8px; }
