@@ -13,7 +13,7 @@ struct StickyPresenterApp: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            StickyPresenterSupportView()
                 .leeoSatisfactionCheck(StickyPresenterSpec.self)
         }
     }

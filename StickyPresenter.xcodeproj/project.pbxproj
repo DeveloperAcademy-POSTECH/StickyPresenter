@@ -13,6 +13,7 @@
 		566692F340340208C97269A2 /* LeeoKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9205B987B4BB72ED1752239A /* LeeoKit */; };
 		913A9E80196553D08A72B789 /* StickyPresenterSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018C95EA063E261ED87C0981 /* StickyPresenterSpec.swift */; };
 		B5D2738A610477EAFEF6E4E1 /* StickyPresenterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */; };
+		BC840BD162FFD3FABCABF04E /* StickyPresenterSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8833C5645EA406C1B6D374FD /* StickyPresenterSupportView.swift */; };
 		BD8A0E985F4D66222881B1A3 /* NoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF4329275C9703866DAC1970 /* NoteManager.swift */; };
 		F70D0A179ADFB07064549AF1 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */; };
 		FD24403C7B6C1997E5A41B7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 410D2C3E3B48D9CF561B79A0 /* Assets.xcassets */; };
@@ -24,6 +25,7 @@
 		297DE0A01465C4B2434B2050 /* LeeoKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LeeoKit; path = ../LeeoKit; sourceTree = SOURCE_ROOT; };
 		410D2C3E3B48D9CF561B79A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		85B18F240C26BA63598B84FC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		8833C5645EA406C1B6D374FD /* StickyPresenterSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyPresenterSupportView.swift; sourceTree = "<group>"; };
 		BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyPresenterApp.swift; sourceTree = "<group>"; };
 		D93BDEA48650FA7A04F708DB /* StickyNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyNoteView.swift; sourceTree = "<group>"; };
 		DF99E57239D4D71B87840235 /* TimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerView.swift; sourceTree = "<group>"; };
@@ -70,6 +72,7 @@
 				D93BDEA48650FA7A04F708DB /* StickyNoteView.swift */,
 				BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */,
 				018C95EA063E261ED87C0981 /* StickyPresenterSpec.swift */,
+				8833C5645EA406C1B6D374FD /* StickyPresenterSupportView.swift */,
 				E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */,
 				DF99E57239D4D71B87840235 /* TimerView.swift */,
 			);
@@ -166,6 +169,7 @@
 				2E61AA6885F159A58591C278 /* StickyNoteView.swift in Sources */,
 				B5D2738A610477EAFEF6E4E1 /* StickyPresenterApp.swift in Sources */,
 				913A9E80196553D08A72B789 /* StickyPresenterSpec.swift in Sources */,
+				BC840BD162FFD3FABCABF04E /* StickyPresenterSupportView.swift in Sources */,
 				F70D0A179ADFB07064549AF1 /* TeleprompterView.swift in Sources */,
 				1E58EBD355CD262905414C5B /* TimerView.swift in Sources */,
 			);
