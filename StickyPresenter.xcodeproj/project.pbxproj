@@ -137,9 +137,10 @@
 			mainGroup = 93B576DEF5BFEEBEEF479A36;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				95063431C9392C766702DA51 /* XCLocalSwiftPackageReference "../LeeoKit" */,
+				95063431C9392C766702DA51 /* XCLocalSwiftPackageReference "LeeoKit" */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 3ADF417140C9F07A946E64C3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -373,7 +374,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		95063431C9392C766702DA51 /* XCLocalSwiftPackageReference "../LeeoKit" */ = {
+		95063431C9392C766702DA51 /* XCLocalSwiftPackageReference "LeeoKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../LeeoKit;
 		};
