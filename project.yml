@@ -5,6 +5,10 @@ options:
     macOS: "14.0"
   xcodeVersion: "15.0"
 
+packages:
+  LeeoKit:
+    path: ../LeeoKit
+
 targets:
   StickyPresenter:
     type: application
@@ -14,6 +18,8 @@ targets:
       - path: StickyPresenter
         excludes:
           - "*.entitlements"
+    dependencies:
+      - package: LeeoKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gaebalja-ri.StickyPresenter

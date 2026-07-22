@@ -1,14 +1,20 @@
 import SwiftUI
 import AppKit
+import LeeoKit
 
 // MARK: - App Entry Point
 @main
 struct StickyPresenterApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
+    init() {
+        LeeoEngagement.shared.registerLaunch()
+    }
+
     var body: some Scene {
         Settings {
             EmptyView()
+                .leeoSatisfactionCheck(StickyPresenterSpec.self)
         }
     }
 }
@@ -145,6 +151,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "🗑 Remove All Notes", action: #selector(removeAllNotes), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
+
+        // MARK: - Contact the Developer
+        let contactMenu = NSMenu()
+        contactMenu.addItem(NSMenuItem(title: "✉️ Email (leeo@kakao.com)", action: #selector(contactByEmail), keyEquivalent: ""))
+        contactMenu.addItem(NSMenuItem(title: "📷 Instagram DM (@lee25_ios)", action: #selector(contactByInstagram), keyEquivalent: ""))
+        let contactItem = NSMenuItem(title: "💬 Contact the Developer", action: nil, keyEquivalent: "")
+        contactItem.submenu = contactMenu
+        menu.addItem(contactItem)
+
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit StickyPresenter", action: #selector(quitApp), keyEquivalent: "q"))
         
         statusItem?.menu = menu
@@ -214,6 +230,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    // MARK: - Contact the Developer
+    @objc func contactByEmail() {
+        if let url = URL(string: "mailto:leeo@kakao.com") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc func contactByInstagram() {
+        if let url = URL(string: "https://instagram.com/lee25_ios") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     @objc func quitApp() {
         NSApp.terminate(nil)
     }
