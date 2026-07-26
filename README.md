@@ -43,7 +43,7 @@ Lucid Notes에서 영감을 받아, Keynote 프레젠테이션 중에도 메모�
 3. Product Name: `StickyPresenter`
 4. Interface: **SwiftUI**
 5. Language: **Swift**
-6. Bundle Identifier: `com.gaebalja-ri.StickyPresenter`
+6. Bundle Identifier: `com.leeo.StickyPresenter`
 7. ❌ Use Core Data 체크 해제
 8. ❌ Include Tests 체크 해제
 
