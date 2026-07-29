@@ -76,16 +76,19 @@ class TimerEntry: ObservableObject, Identifiable {
     func addSeconds(_ s: TimeInterval = 30) {
         guard !isInvalidated else { return }
         targetSeconds += s
+        WidgetSync.refresh()
     }
 
     func subtractSeconds(_ s: TimeInterval = 30) {
         guard !isInvalidated else { return }
         elapsed = min(elapsed + s, targetSeconds)
+        WidgetSync.refresh()
     }
 
     func addMinute() {
         guard !isInvalidated else { return }
         targetSeconds += 60
+        WidgetSync.refresh()
     }
 
     func reset() {
@@ -93,12 +96,14 @@ class TimerEntry: ObservableObject, Identifiable {
         stopTicker()
         isRunning = false
         elapsed = 0
+        WidgetSync.refresh()
     }
 
     func setRunning(_ value: Bool) {
         guard !isInvalidated, value != isRunning else { return }
         isRunning = value
         if value { startTicker() } else { stopTicker() }
+        WidgetSync.refresh()
     }
 
     func toggleRunning() {
@@ -119,6 +124,7 @@ class TimerEntry: ObservableObject, Identifiable {
                 self.stopTicker()
                 self.isRunning = false
                 self.playFinishSound()   // 완료 청각 피드백 (위젯이 숨겨져 있어도 울림)
+                WidgetSync.refresh()     // 데스크톱 위젯을 "완료" 표시로 전환
             }
         }
         RunLoop.main.add(t, forMode: .common)
@@ -157,6 +163,7 @@ class TimerListManager: ObservableObject {
     func add(_ entry: TimerEntry) {
         entries.append(entry)
         onAdd?(entry)
+        WidgetSync.refresh()
     }
 
     func remove(_ entry: TimerEntry) {
@@ -171,6 +178,7 @@ class TimerListManager: ObservableObject {
         DispatchQueue.main.async {
             self.onRemove?(entry)
             self.entries.removeAll { $0.id == entry.id }
+            WidgetSync.refresh()
         }
     }
 }

@@ -3,43 +3,49 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08B27903A8BDC4667DAEDCAE /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F5EC97CF9B635926B756EDE7 /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1E58EBD355CD262905414C5B /* TimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF99E57239D4D71B87840235 /* TimerView.swift */; };
 		2E61AA6885F159A58591C278 /* StickyNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93BDEA48650FA7A04F708DB /* StickyNoteView.swift */; };
 		4520B10FC76C4332457425D1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B18F240C26BA63598B84FC /* Models.swift */; };
 		566692F340340208C97269A2 /* LeeoKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9205B987B4BB72ED1752239A /* LeeoKit */; };
+		67CA2B74D4B805FEEA4EEB41 /* WidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693CDC6530CDA0FE07D952D5 /* WidgetBundle.swift */; };
+		67D3A00AFE0F87842E702003 /* Widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D466572AD7F3D57FAAA5F5E /* Widget.swift */; };
+		74C5E04A0EAFD46C9EDEC500 /* SharedTimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF9684AB311403806FC69164 /* SharedTimerStore.swift */; };
 		913A9E80196553D08A72B789 /* StickyPresenterSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018C95EA063E261ED87C0981 /* StickyPresenterSpec.swift */; };
-		9CCAB074301515C300F5C17D /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CCAB073301515C300F5C17D /* WidgetKit.framework */; };
-		9CCAB076301515C300F5C17D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CCAB075301515C300F5C17D /* SwiftUI.framework */; };
-		9CCAB083301515C400F5C17D /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9CCAB071301515C300F5C17D /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9247BED7BC2C17F8896286B4 /* WidgetSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52DA15621F87984BF287F7FA /* WidgetSync.swift */; };
+		9FF93CE7F5C60CE0290F7437 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 57FC43C738503D17298F0CA1 /* Assets.xcassets */; };
+		A9EF416AACC3D9A7D56A6617 /* SharedTimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF9684AB311403806FC69164 /* SharedTimerStore.swift */; };
 		B5D2738A610477EAFEF6E4E1 /* StickyPresenterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */; };
 		BC840BD162FFD3FABCABF04E /* StickyPresenterSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8833C5645EA406C1B6D374FD /* StickyPresenterSupportView.swift */; };
 		BD8A0E985F4D66222881B1A3 /* NoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF4329275C9703866DAC1970 /* NoteManager.swift */; };
+		C98F6A75B3B17F66D056B410 /* TimerSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67845E0D54867A0253FA4103 /* TimerSnapshot.swift */; };
 		F70D0A179ADFB07064549AF1 /* TeleprompterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */; };
+		F9CA84B6EA1EA015CC5974F6 /* TimerSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67845E0D54867A0253FA4103 /* TimerSnapshot.swift */; };
 		FD24403C7B6C1997E5A41B7A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 410D2C3E3B48D9CF561B79A0 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		9CCAB081301515C400F5C17D /* PBXContainerItemProxy */ = {
+		1E097489A1D8DF2D4F55D26D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 82FC3E309B7A314612293C39 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 9CCAB070301515C300F5C17D;
+			remoteGlobalIDString = E4F6564706096DCB21306D05;
 			remoteInfo = WidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		9CCAB088301515C400F5C17D /* Embed Foundation Extensions */ = {
+		F84729AA065AD4AEFCA91172 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				9CCAB083301515C400F5C17D /* WidgetExtension.appex in Embed Foundation Extensions */,
+				08B27903A8BDC4667DAEDCAE /* WidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,44 +56,24 @@
 		018C95EA063E261ED87C0981 /* StickyPresenterSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyPresenterSpec.swift; sourceTree = "<group>"; };
 		13C3EEFCEFE7D5C993A311A0 /* StickyPresenter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StickyPresenter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		410D2C3E3B48D9CF561B79A0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		52DA15621F87984BF287F7FA /* WidgetSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSync.swift; sourceTree = "<group>"; };
+		57FC43C738503D17298F0CA1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		67845E0D54867A0253FA4103 /* TimerSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerSnapshot.swift; sourceTree = "<group>"; };
+		693CDC6530CDA0FE07D952D5 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
 		85B18F240C26BA63598B84FC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		8833C5645EA406C1B6D374FD /* StickyPresenterSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyPresenterSupportView.swift; sourceTree = "<group>"; };
-		9CCAB071301515C300F5C17D /* WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		9CCAB073301515C300F5C17D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		9CCAB075301515C300F5C17D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		9CCAB089301515D000F5C17D /* WidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WidgetExtension.entitlements; sourceTree = "<group>"; };
+		8D466572AD7F3D57FAAA5F5E /* Widget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widget.swift; sourceTree = "<group>"; };
 		BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyPresenterApp.swift; sourceTree = "<group>"; };
+		BF9684AB311403806FC69164 /* SharedTimerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTimerStore.swift; sourceTree = "<group>"; };
 		D93BDEA48650FA7A04F708DB /* StickyNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickyNoteView.swift; sourceTree = "<group>"; };
 		DF99E57239D4D71B87840235 /* TimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerView.swift; sourceTree = "<group>"; };
 		E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeleprompterView.swift; sourceTree = "<group>"; };
 		EF4329275C9703866DAC1970 /* NoteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteManager.swift; sourceTree = "<group>"; };
 		F1F693E1CBCB5DD0A681806F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F5EC97CF9B635926B756EDE7 /* WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		9CCAB084301515C400F5C17D /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 9CCAB070301515C300F5C17D /* WidgetExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		9CCAB077301515C300F5C17D /* Widget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (9CCAB084301515C400F5C17D /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Widget; sourceTree = "<group>"; };
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFrameworksBuildPhase section */
-		9CCAB06E301515C300F5C17D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				9CCAB076301515C300F5C17D /* SwiftUI.framework in Frameworks */,
-				9CCAB074301515C300F5C17D /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		CF6870F170B4B360DAFBD2AA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -103,7 +89,7 @@
 			isa = PBXGroup;
 			children = (
 				13C3EEFCEFE7D5C993A311A0 /* StickyPresenter.app */,
-				9CCAB071301515C300F5C17D /* WidgetExtension.appex */,
+				F5EC97CF9B635926B756EDE7 /* WidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,6 +107,7 @@
 				8833C5645EA406C1B6D374FD /* StickyPresenterSupportView.swift */,
 				E071E9DE16ADEA99C6891E0B /* TeleprompterView.swift */,
 				DF99E57239D4D71B87840235 /* TimerView.swift */,
+				52DA15621F87984BF287F7FA /* WidgetSync.swift */,
 			);
 			path = StickyPresenter;
 			sourceTree = "<group>";
@@ -128,21 +115,30 @@
 		93B576DEF5BFEEBEEF479A36 = {
 			isa = PBXGroup;
 			children = (
-				9CCAB089301515D000F5C17D /* WidgetExtension.entitlements */,
+				DA0B2E4013F037079BEEEDA4 /* Shared */,
 				7BCAE0F27A18C7ABDB17C839 /* StickyPresenter */,
-				9CCAB077301515C300F5C17D /* Widget */,
-				9CCAB072301515C300F5C17D /* Frameworks */,
+				DCCA3FAB764E76769CF9EDF1 /* Widget */,
 				3ADF417140C9F07A946E64C3 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		9CCAB072301515C300F5C17D /* Frameworks */ = {
+		DA0B2E4013F037079BEEEDA4 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
-				9CCAB073301515C300F5C17D /* WidgetKit.framework */,
-				9CCAB075301515C300F5C17D /* SwiftUI.framework */,
+				BF9684AB311403806FC69164 /* SharedTimerStore.swift */,
+				67845E0D54867A0253FA4103 /* TimerSnapshot.swift */,
 			);
-			name = Frameworks;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		DCCA3FAB764E76769CF9EDF1 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				57FC43C738503D17298F0CA1 /* Assets.xcassets */,
+				8D466572AD7F3D57FAAA5F5E /* Widget.swift */,
+				693CDC6530CDA0FE07D952D5 /* WidgetBundle.swift */,
+			);
+			path = Widget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -155,12 +151,12 @@
 				131743CEEF115C44EDB569D2 /* Sources */,
 				6EC80E7FF58A0A48423D75EE /* Resources */,
 				CF6870F170B4B360DAFBD2AA /* Frameworks */,
-				9CCAB088301515C400F5C17D /* Embed Foundation Extensions */,
+				F84729AA065AD4AEFCA91172 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				9CCAB082301515C400F5C17D /* PBXTargetDependency */,
+				89727CB2A57DB70C606D4D5E /* PBXTargetDependency */,
 			);
 			name = StickyPresenter;
 			packageProductDependencies = (
@@ -170,26 +166,22 @@
 			productReference = 13C3EEFCEFE7D5C993A311A0 /* StickyPresenter.app */;
 			productType = "com.apple.product-type.application";
 		};
-		9CCAB070301515C300F5C17D /* WidgetExtension */ = {
+		E4F6564706096DCB21306D05 /* WidgetExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 9CCAB085301515C400F5C17D /* Build configuration list for PBXNativeTarget "WidgetExtension" */;
+			buildConfigurationList = 1B7691E65272FF4D9887FDB4 /* Build configuration list for PBXNativeTarget "WidgetExtension" */;
 			buildPhases = (
-				9CCAB06D301515C300F5C17D /* Sources */,
-				9CCAB06E301515C300F5C17D /* Frameworks */,
-				9CCAB06F301515C300F5C17D /* Resources */,
+				D332860A34CFDA4C92F37C3D /* Sources */,
+				4673931DACCC2A9E3E71DAB5 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				9CCAB077301515C300F5C17D /* Widget */,
-			);
 			name = WidgetExtension;
 			packageProductDependencies = (
 			);
 			productName = WidgetExtension;
-			productReference = 9CCAB071301515C300F5C17D /* WidgetExtension.appex */;
+			productReference = F5EC97CF9B635926B756EDE7 /* WidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -199,15 +191,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					44900E0A1F5605936678A9A9 = {
 						DevelopmentTeam = QGAQ3AY3R3;
 						ProvisioningStyle = Automatic;
 					};
-					9CCAB070301515C300F5C17D = {
-						CreatedOnToolsVersion = 26.2;
+					E4F6564706096DCB21306D05 = {
+						DevelopmentTeam = QGAQ3AY3R3;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -225,29 +217,29 @@
 				A84C16C6E41292AE50884A0D /* XCRemoteSwiftPackageReference "LeeoKit" */,
 			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 3ADF417140C9F07A946E64C3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				44900E0A1F5605936678A9A9 /* StickyPresenter */,
-				9CCAB070301515C300F5C17D /* WidgetExtension */,
+				E4F6564706096DCB21306D05 /* WidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		4673931DACCC2A9E3E71DAB5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9FF93CE7F5C60CE0290F7437 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6EC80E7FF58A0A48423D75EE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				FD24403C7B6C1997E5A41B7A /* Assets.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9CCAB06F301515C300F5C17D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,29 +252,36 @@
 			files = (
 				4520B10FC76C4332457425D1 /* Models.swift in Sources */,
 				BD8A0E985F4D66222881B1A3 /* NoteManager.swift in Sources */,
+				74C5E04A0EAFD46C9EDEC500 /* SharedTimerStore.swift in Sources */,
 				2E61AA6885F159A58591C278 /* StickyNoteView.swift in Sources */,
 				B5D2738A610477EAFEF6E4E1 /* StickyPresenterApp.swift in Sources */,
 				913A9E80196553D08A72B789 /* StickyPresenterSpec.swift in Sources */,
 				BC840BD162FFD3FABCABF04E /* StickyPresenterSupportView.swift in Sources */,
 				F70D0A179ADFB07064549AF1 /* TeleprompterView.swift in Sources */,
+				C98F6A75B3B17F66D056B410 /* TimerSnapshot.swift in Sources */,
 				1E58EBD355CD262905414C5B /* TimerView.swift in Sources */,
+				9247BED7BC2C17F8896286B4 /* WidgetSync.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9CCAB06D301515C300F5C17D /* Sources */ = {
+		D332860A34CFDA4C92F37C3D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A9EF416AACC3D9A7D56A6617 /* SharedTimerStore.swift in Sources */,
+				F9CA84B6EA1EA015CC5974F6 /* TimerSnapshot.swift in Sources */,
+				67D3A00AFE0F87842E702003 /* Widget.swift in Sources */,
+				67CA2B74D4B805FEEA4EEB41 /* WidgetBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		9CCAB082301515C400F5C17D /* PBXTargetDependency */ = {
+		89727CB2A57DB70C606D4D5E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 9CCAB070301515C300F5C17D /* WidgetExtension */;
-			targetProxy = 9CCAB081301515C400F5C17D /* PBXContainerItemProxy */;
+			target = E4F6564706096DCB21306D05 /* WidgetExtension */;
+			targetProxy = 1E097489A1D8DF2D4F55D26D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -369,6 +368,66 @@
 			};
 			name = Release;
 		};
+		7AAEF37159C981E6BD4F19CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 3;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = QGAQ3AY3R3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leeo.StickyPresenter.Widget;
+				PRODUCT_NAME = WidgetExtension;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		93C4389DC69FA5650A16B8C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 3;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = QGAQ3AY3R3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leeo.StickyPresenter.Widget;
+				PRODUCT_NAME = WidgetExtension;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
 		9A2D26DA5E311F91F5CB2613 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -392,89 +451,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
-			};
-			name = Release;
-		};
-		9CCAB086301515C400F5C17D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CODE_SIGN_ENTITLEMENTS = WidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
-				DEVELOPMENT_TEAM = QGAQ3AY3R3;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Widget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Widget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.leeo.StickyPresenter.Widget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		9CCAB087301515C400F5C17D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CODE_SIGN_ENTITLEMENTS = WidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
-				DEVELOPMENT_TEAM = QGAQ3AY3R3;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Widget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Widget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.leeo.StickyPresenter.Widget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -544,20 +520,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1B7691E65272FF4D9887FDB4 /* Build configuration list for PBXNativeTarget "WidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				93C4389DC69FA5650A16B8C6 /* Debug */,
+				7AAEF37159C981E6BD4F19CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		68049B4B9F0D2A5E0338C590 /* Build configuration list for PBXProject "StickyPresenter" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA32BC10683C9CED54488CDB /* Debug */,
 				6C94744B406D49F37763DD88 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		9CCAB085301515C400F5C17D /* Build configuration list for PBXNativeTarget "WidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				9CCAB086301515C400F5C17D /* Debug */,
-				9CCAB087301515C400F5C17D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

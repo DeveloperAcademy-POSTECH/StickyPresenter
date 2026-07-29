@@ -12,6 +12,5 @@ import SwiftUI
 struct StickyPresenterWidgetBundle: WidgetBundle {
     var body: some Widget {
         StickyPresenterWidget()
-        WidgetControl()
     }
 }

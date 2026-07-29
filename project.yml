@@ -19,8 +19,11 @@ targets:
       - path: StickyPresenter
         excludes:
           - "*.entitlements"
+      # 앱과 위젯이 함께 컴파일하는 App Group 공유 모델·저장소
+      - path: Shared
     dependencies:
       - package: LeeoKit
+      - target: WidgetExtension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.leeo.StickyPresenter
@@ -35,6 +38,44 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
         SWIFT_EMIT_LOC_STRINGS: YES
+      configs:
+        Debug:
+          DEBUG_INFORMATION_FORMAT: dwarf
+          SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+        Release:
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+          COPY_PHASE_STRIP: NO
+
+  WidgetExtension:
+    type: app-extension
+    platform: macOS
+    # 앱 본체와 동일하게 유지할 것 — 익스텐션이 더 높으면 하위 macOS에서 위젯이 뜨지 않는다.
+    deploymentTarget: "14.0"
+    sources:
+      - path: Widget
+        excludes:
+          - "Info.plist"
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.leeo.StickyPresenter.Widget
+        PRODUCT_NAME: WidgetExtension
+        # 임베드된 익스텐션은 컨테이너 앱과 버전이 같아야 App Store 검증을 통과한다.
+        # StickyPresenter/Info.plist의 값과 함께 올릴 것.
+        MARKETING_VERSION: "1.0.2"
+        CURRENT_PROJECT_VERSION: "3"
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        INFOPLIST_FILE: Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WidgetExtension.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: QGAQ3AY3R3
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
       configs:
         Debug:
           DEBUG_INFORMATION_FORMAT: dwarf

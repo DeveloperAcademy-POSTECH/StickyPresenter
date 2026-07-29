@@ -60,6 +60,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 앱 시작 시 타이머 항상 열기
         noteManager.openTimerList()
+
+        // 지난 실행에서 남은 스냅샷을 현재 상태로 덮어쓴다.
+        // 타이머가 돌아가는 중에 앱이 종료되면 위젯이 끝나지 않는 카운트다운을 계속 그리기 때문.
+        WidgetSync.refresh()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // 앱이 없으면 타이머도 멈춘 것 — 위젯에 남은 카운트다운을 정리한다.
+        SharedTimerStore.save(nil)
     }
 
     // MARK: - Global Hotkeys (⌘⌃ prefix for all)
