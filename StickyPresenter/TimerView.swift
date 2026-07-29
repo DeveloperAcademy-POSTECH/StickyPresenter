@@ -739,7 +739,12 @@ struct TimerWidgetView: View {
     var onClose: (() -> Void)? = nil   // windowed 모드에서만 닫기 버튼 표시
     @State private var isHovered = false
     @State private var finishPulse = false   // 완료 시 빨간 테두리 펄스
+    @State private var pulseTask: Task<Void, Never>? = nil
     @Environment(\.colorScheme) private var systemScheme
+
+    /// 완료 시 테두리가 깜빡이는 최대 횟수 (이후에는 고정 표시)
+    private static let finishPulseCount = 5
+    private static let finishPulseDuration: Double = 0.5
 
     // MARK: - Theme palette
     private var isDark: Bool {
@@ -824,17 +829,36 @@ struct TimerWidgetView: View {
         }
         .onChange(of: entry.isFinished) { finished in updatePulse(finished) }
         .onAppear { updatePulse(entry.isFinished) }
+        .onDisappear { pulseTask?.cancel(); pulseTask = nil }
     }
 
     // 완료 시 빨간 테두리 펄스 애니메이션 시작/정지
+    // 최대 finishPulseCount 회만 깜빡인 뒤, 완료 상태를 알리는 테두리를 고정으로 남긴다.
     private func updatePulse(_ finished: Bool) {
-        if finished {
-            finishPulse = false
-            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
-                finishPulse = true
-            }
-        } else {
+        pulseTask?.cancel()
+        pulseTask = nil
+
+        guard finished else {
             withAnimation(.easeInOut(duration: 0.2)) { finishPulse = false }
+            return
+        }
+
+        finishPulse = false
+        let step = Self.finishPulseDuration
+        let nanos = UInt64(step * 1_000_000_000)
+
+        pulseTask = Task { @MainActor in
+            for _ in 0..<Self.finishPulseCount {
+                withAnimation(.easeInOut(duration: step)) { finishPulse = true }
+                try? await Task.sleep(nanoseconds: nanos)
+                if Task.isCancelled { return }
+
+                withAnimation(.easeInOut(duration: step)) { finishPulse = false }
+                try? await Task.sleep(nanoseconds: nanos)
+                if Task.isCancelled { return }
+            }
+            // 깜빡임 종료 — 테두리는 켜진 상태로 고정
+            withAnimation(.easeInOut(duration: step)) { finishPulse = true }
         }
     }
 
