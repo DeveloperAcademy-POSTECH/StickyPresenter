@@ -64,8 +64,8 @@ targets:
         PRODUCT_NAME: WidgetExtension
         # 임베드된 익스텐션은 컨테이너 앱과 버전이 같아야 App Store 검증을 통과한다.
         # StickyPresenter/Info.plist의 값과 함께 올릴 것.
-        MARKETING_VERSION: "1.0.2"
-        CURRENT_PROJECT_VERSION: "3"
+        MARKETING_VERSION: "1.0.3"
+        CURRENT_PROJECT_VERSION: "4"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         INFOPLIST_FILE: Widget/Info.plist
