@@ -73,9 +73,15 @@ class NoteManager: ObservableObject {
 
     // MARK: - Create timer widget window (NSWindow for AirPlay/screen sharing support)
     private func createTimerWidgetWindow(frame: NSRect) -> NSWindow {
+        // .resizable 을 넣지 말 것.
+        // 넣으면 AppKit이 창 가장자리에 자체 리사이즈 추적을 설치하는데, 그 띠가
+        // 우하단 그립(ResizeHandleNSView)과 겹쳐 같은 모서리에 리사이저가 둘이 된다.
+        // AppKit 쪽은 반대편 모서리를 고정하고 우리 쪽은 상단을 고정하므로,
+        // 그립의 어느 지점을 눌렀느냐에 따라 창이 다르게 움직인다.
+        // 리사이즈는 ResizeHandleNSView 하나로만 처리한다.
         let window = NSWindow(
             contentRect: frame,
-            styleMask: [.borderless, .fullSizeContentView, .resizable],
+            styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -220,7 +226,9 @@ class NoteManager: ObservableObject {
         let window = createTimerWidgetWindow(frame: frame)
         window.alphaValue = 1.0
         window.minSize = NSSize(width: 120, height: 120)
-        window.aspectRatio = NSSize(width: 1, height: 1)  // 정사각 비율 보존
+        // aspectRatio 는 설정하지 않는다 — AppKit의 리사이즈 경로에서만 의미가 있고,
+        // 우리가 직접 계산해 넘기는 setFrame 값과 어긋날 여지만 남는다.
+        // 정사각 비율은 ResizeHandleNSView 가 시작 시점의 비율을 잡아 직접 유지한다.
         window.title = "Timer – \(entry.name)"
 
         let widgetHostingView = NSHostingView(rootView:

@@ -97,6 +97,7 @@ class TimerEntry: ObservableObject, Identifiable {
         isRunning = false
         elapsed = 0
         WidgetSync.refresh()
+        MusicPlayer.shared.syncWithTimers()
     }
 
     func setRunning(_ value: Bool) {
@@ -104,6 +105,7 @@ class TimerEntry: ObservableObject, Identifiable {
         isRunning = value
         if value { startTicker() } else { stopTicker() }
         WidgetSync.refresh()
+        MusicPlayer.shared.syncWithTimers()
     }
 
     func toggleRunning() {
@@ -125,6 +127,8 @@ class TimerEntry: ObservableObject, Identifiable {
                 self.isRunning = false
                 self.playFinishSound()   // 완료 청각 피드백 (위젯이 숨겨져 있어도 울림)
                 WidgetSync.refresh()     // 데스크톱 위젯을 "완료" 표시로 전환
+                // 완료 차임이 배경음악에 묻히지 않도록 페이드아웃
+                MusicPlayer.shared.syncWithTimers()
             }
         }
         RunLoop.main.add(t, forMode: .common)
@@ -179,6 +183,7 @@ class TimerListManager: ObservableObject {
             self.onRemove?(entry)
             self.entries.removeAll { $0.id == entry.id }
             WidgetSync.refresh()
+            MusicPlayer.shared.syncWithTimers()
         }
     }
 }
@@ -394,6 +399,9 @@ struct TimerListView: View {
                     .padding(.bottom, 16)
                 }
             }
+
+            // 배경음악 바 — 분위기 선택 · 재생 · 볼륨
+            MusicBar()
         }
         .frame(minWidth: 280, minHeight: 180)
         .background(.regularMaterial)
@@ -628,17 +636,17 @@ final class ResizeHandleNSView: NSView {
 
             case .leftMouseDragged:
                 let mouse = NSEvent.mouseLocation
-                let dx = mouse.x - startMouse.x
-                let dy = mouse.y - startMouse.y          // 위로 +, 아래로 -
+                let dW = mouse.x - startMouse.x          // 오른쪽으로 끌면 +
+                let dH = startMouse.y - mouse.y          // 아래로 끌면 +
 
-                // 정사각형 위젯이므로 끌어당기는 축(가로/세로)이 커서를 그대로 따라오도록
-                // 두 후보 스케일 중 큰 쪽 채택 → 드래그한 만큼 크기가 변함.
-                let candW = startFrame.width + dx
-                let candH = startFrame.height - dy   // 아래로 끌면 dy<0 → 높이 증가
-                let scale = max(candW / startFrame.width, candH / startFrame.height)
+                // 비율을 유지하려면 (Δ가로, Δ세로)가 반드시 Δ가로 = aspect × Δ세로 위에 놓여야 한다.
+                // 마우스 이동량을 그 직선에 정사영(수직으로 내림) → 커서에서 가장 가까운 모서리 위치.
+                // 대각선 방향으로 끌면 모서리가 포인터에 정확히 붙고, 한 축으로만 끌어도
+                // 이동량이 그대로 반영돼 "따라오는" 느낌이 유지된다.
+                let h = (aspect * dW + dH) / (aspect * aspect + 1)
 
-                var newW = startFrame.width * scale
-                var newH = newW / aspect
+                var newH = startFrame.height + h
+                var newW = newH * aspect
                 // 최소 크기 클램프 (비율 유지)
                 if newW < minSize.width  { newW = minSize.width;  newH = newW / aspect }
                 if newH < minSize.height { newH = minSize.height; newW = newH * aspect }
@@ -801,12 +809,13 @@ struct TimerWidgetView: View {
                     .animation(.easeInOut(duration: 0.15), value: isHiddenPeek)
 
                 // 완료 시각 피드백 — 빨간 테두리 펄스
+                // 깜빡임이 끝나면 완전히 사라진다 (opacity 0) — 시선을 계속 붙잡지 않도록.
                 if entry.isFinished {
                     RoundedRectangle(cornerRadius: 24)
                         .strokeBorder(Color(red: 1, green: 0.22, blue: 0.37),
                                       lineWidth: max(3, 6 * scale))
                         .frame(width: geo.size.width, height: geo.size.height)
-                        .opacity(finishPulse ? 0.9 : 0.15)
+                        .opacity(finishPulse ? 0.9 : 0)
                 }
 
                 // 리사이즈 그립 (호버 시 등장) — 드래그하면 윈도우 크기 조절
@@ -841,7 +850,7 @@ struct TimerWidgetView: View {
     }
 
     // 완료 시 빨간 테두리 펄스 애니메이션 시작/정지
-    // 최대 finishPulseCount 회만 깜빡인 뒤, 완료 상태를 알리는 테두리를 고정으로 남긴다.
+    // 최대 finishPulseCount 회만 깜빡인 뒤 테두리를 완전히 지운다 — 발표 중 시선을 계속 붙잡지 않도록.
     private func updatePulse(_ finished: Bool) {
         pulseTask?.cancel()
         pulseTask = nil
@@ -865,8 +874,8 @@ struct TimerWidgetView: View {
                 try? await Task.sleep(nanoseconds: nanos)
                 if Task.isCancelled { return }
             }
-            // 깜빡임 종료 — 테두리는 켜진 상태로 고정
-            withAnimation(.easeInOut(duration: step)) { finishPulse = true }
+            // 깜빡임 종료 — 테두리를 남기지 않고 꺼진 상태로 끝낸다.
+            // 루프 마지막 단계가 이미 false이므로 별도 처리 없이 그대로 둔다.
         }
     }
 
@@ -874,18 +883,19 @@ struct TimerWidgetView: View {
     // 시각 표시는 SwiftUI(우하단 모서리 모양), 실제 리사이즈는 OS 이벤트 추적 루프를 도는 투명 NSView가 담당.
     private var resizeHandle: some View {
         ZStack(alignment: .bottomTrailing) {
-            // 투명 핸들: mouseDown 시 trackEvents로 네이티브 레이트의 리사이즈 수행
+            // 투명 핸들: mouseDown 시 trackEvents로 네이티브 레이트의 리사이즈 수행.
+            // 창 모서리까지 빈틈없이 닿아야 한다 — 틈을 두면 그 부분은
+            // isMovableByWindowBackground 영역이라 리사이즈 대신 창이 끌려간다.
             NativeResizeHandle()
 
             CornerGrip()
                 .stroke(style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
                 .foregroundStyle(.secondary)
                 .frame(width: 13, height: 13)
-                .padding(4)
+                .padding(9)          // 그립 그림만 안쪽으로 — 히트 영역은 모서리까지 유지
                 .allowsHitTesting(false)
         }
-        .frame(width: 28, height: 28)
-        .padding(5)
+        .frame(width: 33, height: 33)
         .help("Drag to resize")
     }
 
