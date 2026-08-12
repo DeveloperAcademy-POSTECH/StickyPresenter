@@ -1,9 +1,14 @@
 # StickyPresenter Todo
 
 ## 진행 중
+- [x] 뽀모도로 타이머 (집중 ↔ 휴식 무한 반복) — 1.0.4
 - [x] 타이머 시작/종료 시 앱 크래시 버그 분석 및 수정
 
 ## 배포 전 남은 일
+- [ ] `v1.0.4` 태그 생성 (버전 상향·릴리즈 노트는 완료)
+- [ ] 실제 앱에서 손으로 확인 (계산은 격리 하네스로 검증함)
+  - 뽀모도로 구간 전환 (메뉴바 🍅 · ⌘⌃B · 입력창 `25/5`)
+  - Window 창 우하단 모서리 드래그가 포인터를 정확히 따라오는지
 - [ ] 배포본에 음원을 **번들할지** 결정
   - 현재 16곡은 로컬 앱 컨테이너에만 있음 — 리포지토리·앱 번들에는 없음
   - 전 곡 Kevin MacLeod / CC-BY 4.0 → 번들 시 앱 내 크레딧 표기 화면 필요 (`CREDITS.txt` 참고)
@@ -16,6 +21,23 @@
 - [ ] `v1.0.3` 태그 생성 (버전 상향·릴리즈 노트는 완료)
 
 ## 완료
+- [x] Window 창 모서리 리사이즈가 마우스보다 크게 자라던 문제 (1.0.4)
+  - 원인 (1) `ResizeHandleNSView`가 **창 프레임** 기준으로 비율을 잡음 — 제목표시줄(32pt)이 섞여
+    aspect가 200/232=0.862가 되고, 대각선으로 100 끌면 콘텐츠가 92×107로 자람 (세로 +6.8% 초과)
+  - 원인 (2) `contentAspectRatio 1:1`이 그 어긋난 콘텐츠를 다시 정사각형으로 늘려 초과분이 가로까지 전파
+  - 원인 (3) `.resizable` 이 AppKit 자체 리사이즈 띠를 그립 위에 겹쳐 설치 (위젯 창에서 고쳤던 것과 동일)
+  - 수정: 핸들을 `contentRect(forFrameRect:)` / `frameRect(forContentRect:)` 기준으로 계산,
+    presentation 창에서 `.resizable` 과 `contentAspectRatio` 제거. 테두리 없는 위젯은 chrome=0이라 동작 동일
+- [x] 뽀모도로 타이머 (1.0.4)
+  - 타이머 패널 UI에는 넣지 않음 — 진입점은 메뉴바 🍅 Pomodoro(⌘⌃B)와 `25/5` 입력 두 가지
+  - `TimerView.swift` — `PomodoroPhase`(focus/rest), `PomodoroConfig`(집중·휴식 길이)
+  - `TimerEntry.pomodoro`가 있으면 구간이 끝나도 ticker를 멈추지 않고 `advancePomodoroPhase`로 반대 구간 전환 → 무한 반복
+    `isRunning`이 계속 true라 배경음악도 끊기지 않음 (`syncWithTimers` 호출 불필요)
+  - `isFinished`는 뽀모도로에서 항상 false — 완료 빨간 테두리·완료음이 뜨지 않게. 대신 구간 전환음(Submarine/Glass) 2회
+  - 입력 `25/5` → `parsePomodoroInput` (슬래시 양쪽을 기존 `parseTimerInput`으로 해석)
+  - 구간 색: 집중 토마토 / 휴식 민트 — 행 남은 시간·위젯 링·배지에 공통 적용, `#n` 사이클 표시
+  - 메뉴바 `🍅 Pomodoro (25/5)` + ⌘⌃B(keyCode 11), `NoteManager.startPomodoro(_:)`
+  - 알림 센터 위젯 스냅샷 이름은 `displayName`(예: `25m/5m · Focus`)
 - [x] 타이머 배경음악 (분위기별 파일 기반 플레이어)
   - `TimerMusic.swift` — `MusicMood`(집중/차분/재즈/활기), `MusicLibrary`, `MusicPlayer`, `MusicBar`
   - 음원은 번들하지 않고 앱 컨테이너 `Application Support/StickyPresenter/Music/<분위기>` 를 스캔

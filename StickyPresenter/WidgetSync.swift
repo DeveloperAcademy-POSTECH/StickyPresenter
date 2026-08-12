@@ -24,7 +24,8 @@ extension TimerEntry {
     /// 위젯으로 넘길 직렬화 가능한 상태.
     var snapshot: TimerSnapshot {
         TimerSnapshot(
-            name: name,
+            // 뽀모도로는 이름에 현재 구간(Focus/Break)이 붙는다.
+            name: displayName,
             targetSeconds: targetSeconds,
             remaining: remaining,
             isRunning: isRunning,

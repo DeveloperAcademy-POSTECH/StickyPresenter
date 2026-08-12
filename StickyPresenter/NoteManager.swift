@@ -213,6 +213,19 @@ class NoteManager: ObservableObject {
         }
     }
 
+    // MARK: - Pomodoro
+    /// 타이머 패널을 띄우고 집중 구간부터 도는 뽀모도로를 시작한다. (메뉴바 · 단축키용)
+    func startPomodoro(_ config: PomodoroConfig = .classic) {
+        openTimerList()
+        let entry = TimerEntry(
+            name: config.label,
+            targetSeconds: config.seconds(for: .focus),
+            pomodoro: config
+        )
+        entry.setRunning(true)
+        timerListManager.add(entry)
+    }
+
     // MARK: - Timer Widget
     func showTimerWidget(for entry: TimerEntry) {
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -283,14 +296,18 @@ class NoteManager: ObservableObject {
         // 실제 타이틀 윈도우 — 화면 미러링/공유의 "윈도우 추가" 목록에 이름과 함께 잡힘.
         // fullSizeContentView는 일부러 빼야 콘텐츠(타이머)가 제목표시줄만큼 늘어나지 않고
         // setContentSize로 지정한 정사각형이 그대로 유지됨.
+        // 위젯 창과 같은 이유로 `.resizable` 을 넣지 않는다 — AppKit이 가장자리에 자체 리사이즈
+        // 추적을 설치하면 우하단 그립(ResizeHandleNSView)과 리사이저가 둘이 되어,
+        // 누른 지점에 따라 창이 다르게 움직이고 끈 것보다 크게 자란다.
+        // `contentAspectRatio` 도 같은 이유로 설정하지 않는다: AppKit이 우리가 계산해 넘긴
+        // 프레임을 다시 정사각형으로 늘려 크기가 부풀었다. 정사각 비율은 그립이 직접 유지한다.
         let window = NSWindow(
             contentRect: frame,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         window.title = entry.name.isEmpty ? "Timer" : "Timer – \(entry.name)"  // 캡처 목록용 이름(보이진 않음)
-        window.contentAspectRatio = NSSize(width: 1, height: 1)  // 콘텐츠를 정사각으로 유지
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true

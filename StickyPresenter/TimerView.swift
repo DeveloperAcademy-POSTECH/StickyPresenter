@@ -24,6 +24,46 @@ enum WidgetTheme: String, CaseIterable {
     }
 }
 
+// MARK: - Pomodoro
+/// 뽀모도로 구간 — 집중과 휴식 둘뿐이며 서로를 무한히 오간다.
+enum PomodoroPhase {
+    case focus
+    case rest
+
+    var title: String { self == .focus ? "Focus" : "Break" }
+    var icon: String { self == .focus ? "brain.head.profile" : "cup.and.saucer.fill" }
+    var next: PomodoroPhase { self == .focus ? .rest : .focus }
+
+    /// 집중은 토마토색, 휴식은 민트색 — 위젯을 흘깃 봐도 지금이 어느 구간인지 알 수 있게.
+    var color: Color {
+        self == .focus
+            ? Color(red: 0.91, green: 0.30, blue: 0.24)
+            : Color(red: 0.16, green: 0.68, blue: 0.53)
+    }
+}
+
+/// 집중 ↔ 휴식 길이. 이 설정을 가진 타이머는 완료 없이 두 구간을 계속 반복한다.
+struct PomodoroConfig: Equatable {
+    var focusSeconds: TimeInterval
+    var breakSeconds: TimeInterval
+
+    func seconds(for phase: PomodoroPhase) -> TimeInterval {
+        max(1, phase == .focus ? focusSeconds : breakSeconds)
+    }
+
+    /// "25m/5m" 형태의 짧은 이름 (행·위젯 제목용)
+    var label: String { "\(Self.shortUnit(focusSeconds))/\(Self.shortUnit(breakSeconds))" }
+
+    private static func shortUnit(_ t: TimeInterval) -> String {
+        let total = Int(t.rounded())
+        if total % 60 == 0 { return "\(total / 60)m" }
+        return total >= 60 ? String(format: "%d:%02d", total / 60, total % 60) : "\(total)s"
+    }
+
+    /// 메뉴바 · ⌘⌃B로 시작하는 기본값 (25분 집중 / 5분 휴식)
+    static let classic = PomodoroConfig(focusSeconds: 25 * 60, breakSeconds: 5 * 60)
+}
+
 // MARK: - Timer Entry (Model)
 class TimerEntry: ObservableObject, Identifiable {
     let id = UUID()
@@ -47,6 +87,19 @@ class TimerEntry: ObservableObject, Identifiable {
     var theme: WidgetTheme = .system {
         willSet { if !isInvalidated { objectWillChange.send() } }
     }
+    /// 뽀모도로 설정. nil이면 한 번 울리고 끝나는 일반 타이머.
+    var pomodoro: PomodoroConfig? {
+        willSet { if !isInvalidated { objectWillChange.send() } }
+    }
+    /// 현재 구간(집중/휴식). 일반 타이머에서는 쓰이지 않는다.
+    private(set) var phase: PomodoroPhase = .focus {
+        willSet { if !isInvalidated { objectWillChange.send() } }
+    }
+    /// 지금까지 끝낸 집중 구간 수 — 몇 번째 뽀모도로인지 표시용.
+    private(set) var completedFocusCount: Int = 0 {
+        willSet { if !isInvalidated { objectWillChange.send() } }
+    }
+
     weak var widgetPanel: NSWindow?
 
     private(set) var elapsed: TimeInterval = 0 {
@@ -64,14 +117,29 @@ class TimerEntry: ObservableObject, Identifiable {
     // Foundation Timer.invalidate()는 RunLoop에서 즉시 동기적으로 제거되므로 안전함.
     private var ticker: Foundation.Timer?
 
-    init(name: String, targetSeconds: TimeInterval) {
+    init(name: String, targetSeconds: TimeInterval, pomodoro: PomodoroConfig? = nil) {
         self.name = name
         self.targetSeconds = targetSeconds
+        self.pomodoro = pomodoro
     }
 
+    var isPomodoro: Bool { pomodoro != nil }
+
     var remaining: TimeInterval { max(0, targetSeconds - elapsed) }
-    var isFinished: Bool { elapsed >= targetSeconds }
+    /// 뽀모도로는 구간이 끝나도 곧바로 다음 구간으로 넘어가므로 "완료" 상태가 없다.
+    var isFinished: Bool { !isPomodoro && elapsed >= targetSeconds }
     var progress: Double { min(1.0, elapsed / max(1, targetSeconds)) }
+
+    /// 위젯·창 제목에 쓰는 이름. 뽀모도로는 현재 구간을 함께 보여준다.
+    var displayName: String {
+        guard isPomodoro else { return name }
+        return name.isEmpty ? phase.title : "\(name) · \(phase.title)"
+    }
+
+    /// 몇 번째 집중 구간인지 (휴식 중이면 방금 끝낸 집중 번호)
+    var cycleNumber: Int {
+        phase == .focus ? completedFocusCount + 1 : max(1, completedFocusCount)
+    }
 
     func addSeconds(_ s: TimeInterval = 30) {
         guard !isInvalidated else { return }
@@ -96,6 +164,12 @@ class TimerEntry: ObservableObject, Identifiable {
         stopTicker()
         isRunning = false
         elapsed = 0
+        // 뽀모도로는 첫 집중 구간부터 다시 — 사이클 수도 0으로 되돌린다.
+        if let config = pomodoro {
+            phase = .focus
+            completedFocusCount = 0
+            targetSeconds = config.seconds(for: .focus)
+        }
         WidgetSync.refresh()
         MusicPlayer.shared.syncWithTimers()
     }
@@ -121,15 +195,21 @@ class TimerEntry: ObservableObject, Identifiable {
         let t = Foundation.Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             guard let self, !self.isInvalidated else { return }
             self.elapsed += 1
-            if self.elapsed >= self.targetSeconds {
-                // invalidate()는 현재 콜백 내부에서 호출해도 안전 (Apple 문서 보장).
-                self.stopTicker()
-                self.isRunning = false
-                self.playFinishSound()   // 완료 청각 피드백 (위젯이 숨겨져 있어도 울림)
-                WidgetSync.refresh()     // 데스크톱 위젯을 "완료" 표시로 전환
-                // 완료 차임이 배경음악에 묻히지 않도록 페이드아웃
-                MusicPlayer.shared.syncWithTimers()
+            guard self.elapsed >= self.targetSeconds else { return }
+
+            // 뽀모도로는 멈추지 않는다 — 집중이 끝나면 휴식으로, 휴식이 끝나면 다시 집중으로.
+            if let config = self.pomodoro {
+                self.advancePomodoroPhase(config)
+                return
             }
+
+            // invalidate()는 현재 콜백 내부에서 호출해도 안전 (Apple 문서 보장).
+            self.stopTicker()
+            self.isRunning = false
+            self.playFinishSound()   // 완료 청각 피드백 (위젯이 숨겨져 있어도 울림)
+            WidgetSync.refresh()     // 데스크톱 위젯을 "완료" 표시로 전환
+            // 완료 차임이 배경음악에 묻히지 않도록 페이드아웃
+            MusicPlayer.shared.syncWithTimers()
         }
         RunLoop.main.add(t, forMode: .common)
         ticker = t
@@ -138,6 +218,28 @@ class TimerEntry: ObservableObject, Identifiable {
     private func stopTicker() {
         ticker?.invalidate()
         ticker = nil
+    }
+
+    /// 현재 구간을 끝내고 반대 구간으로 넘어간다.
+    /// ticker는 멈추지 않으므로 사용자가 일시정지하거나 삭제할 때까지 무한히 반복된다.
+    private func advancePomodoroPhase(_ config: PomodoroConfig) {
+        if phase == .focus { completedFocusCount += 1 }
+        phase = phase.next
+        targetSeconds = config.seconds(for: phase)
+        elapsed = 0
+        playPhaseChangeSound(entering: phase)
+        WidgetSync.refresh()
+        // isRunning은 계속 true이므로 배경음악은 끊기지 않는다 (syncWithTimers 불필요).
+    }
+
+    /// 구간 전환 알림음 — 집중 시작과 휴식 시작을 다른 소리로 구분한다.
+    private func playPhaseChangeSound(entering phase: PomodoroPhase) {
+        let sound = phase == .focus ? "Submarine" : "Glass"
+        for i in 0..<2 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.6) {
+                NSSound(named: NSSound.Name(sound))?.play()
+            }
+        }
     }
 
     /// 완료 차임을 0.6초 간격으로 3회 재생해 주의를 끈다.
@@ -233,6 +335,17 @@ func parseTimerInput(_ raw: String) -> TimeInterval {
     return 0
 }
 
+// MARK: - Parse pomodoro input ("25/5", "50m / 10m", "1:30/5")
+/// 슬래시로 나뉜 두 시간을 각각 집중·휴식으로 읽는다. 한쪽이라도 해석되지 않으면 nil.
+func parsePomodoroInput(_ raw: String) -> PomodoroConfig? {
+    let parts = raw.split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+    guard parts.count == 2 else { return nil }
+    let focus = parseTimerInput(String(parts[0]))
+    let rest  = parseTimerInput(String(parts[1]))
+    guard focus > 0, rest > 0 else { return nil }
+    return PomodoroConfig(focusSeconds: focus, breakSeconds: rest)
+}
+
 // MARK: - Timer List View (main panel)
 struct TimerListView: View {
     @ObservedObject var manager: TimerListManager
@@ -243,8 +356,19 @@ struct TimerListView: View {
         parseTimerInput(inputText.trimmingCharacters(in: .whitespaces))
     }
 
+    /// "25/5" 처럼 슬래시가 들어간 입력은 뽀모도로로 해석한다.
+    private var parsedPomodoro: PomodoroConfig? {
+        parsePomodoroInput(inputText.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var hasValidInput: Bool { parsedSeconds > 0 || parsedPomodoro != nil }
+
     private var previewText: String? {
-        guard !inputText.trimmingCharacters(in: .whitespaces).isEmpty, parsedSeconds > 0 else { return nil }
+        guard !inputText.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        if let p = parsedPomodoro {
+            return "↻ Focus \(formatPreviewTime(p.focusSeconds)) · Break \(formatPreviewTime(p.breakSeconds))"
+        }
+        guard parsedSeconds > 0 else { return nil }
         return "→ " + formatPreviewTime(parsedSeconds)
     }
 
@@ -276,7 +400,7 @@ struct TimerListView: View {
                             .onSubmit { submit() }
 
                         // 유효한 입력이 있을 때만 제출 버튼 등장
-                        if parsedSeconds > 0 {
+                        if hasValidInput {
                             Button(action: submit) {
                                 Image(systemName: "arrow.up.circle.fill")
                                     .font(.system(size: 22))
@@ -310,7 +434,7 @@ struct TimerListView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .animation(.spring(response: 0.25, dampingFraction: 0.8), value: parsedSeconds > 0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.8), value: hasValidInput)
             .animation(.easeInOut(duration: 0.15), value: previewText)
             .padding(.horizontal, 16)
             .padding(.top, 14)
@@ -411,6 +535,15 @@ struct TimerListView: View {
     private func submit() {
         let raw = inputText.trimmingCharacters(in: .whitespaces)
         guard !raw.isEmpty else { return }
+
+        // 슬래시 입력("25/5")은 뽀모도로로 만든다.
+        if let config = parsePomodoroInput(raw) {
+            addPomodoro(config)
+            inputText = ""
+            focused = true
+            return
+        }
+
         let secs = parseTimerInput(raw)
         guard secs > 0 else { return }
         let entry = TimerEntry(name: raw, targetSeconds: secs)
@@ -418,6 +551,17 @@ struct TimerListView: View {
         manager.add(entry)
         inputText = ""
         focused = true
+    }
+
+    /// 집중 구간부터 시작하는 뽀모도로 타이머를 추가한다.
+    private func addPomodoro(_ config: PomodoroConfig) {
+        let entry = TimerEntry(
+            name: config.label,
+            targetSeconds: config.seconds(for: .focus),
+            pomodoro: config
+        )
+        entry.setRunning(true)
+        manager.add(entry)
     }
 
     private func addNewStickyNote() {
@@ -439,16 +583,22 @@ struct TimerRowView: View {
 
     private var timeColor: Color {
         if entry.isFinished { return Color(red: 1, green: 0.22, blue: 0.37) }
+        // 뽀모도로는 남은 시간 색으로 지금이 집중인지 휴식인지 알려준다.
+        if entry.isPomodoro { return entry.phase.color }
         return .primary
     }
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(entry.name)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if entry.isPomodoro {
+                    pomodoroLabel
+                } else {
+                    Text(entry.name)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
 
                 Text(formatTime(entry.remaining))
                     .font(.system(size: 30, weight: .bold, design: .monospaced))
@@ -544,6 +694,28 @@ struct TimerRowView: View {
         }
     }
 
+    // 뽀모도로 행 머리말 — 구간 배지 + 설정값 + 몇 번째 사이클인지
+    private var pomodoroLabel: some View {
+        HStack(spacing: 5) {
+            HStack(spacing: 3) {
+                Image(systemName: entry.phase.icon)
+                    .font(.system(size: 9, weight: .bold))
+                Text(entry.phase.title)
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(entry.phase.color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(entry.phase.color.opacity(0.14)))
+
+            Text("\(entry.name) · #\(entry.cycleNumber)")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .animation(.easeInOut(duration: 0.2), value: entry.phase)
+    }
+
     // 표시/감추기 토글: Show는 숨긴 그 자리에서 그대로 다시 보이게 함 (위치 이동 없음).
     // 위치 정렬은 Align 버튼 전용.
     private func toggleWidgetVisibility() {
@@ -614,10 +786,19 @@ final class ResizeHandleNSView: NSView {
     override func mouseDown(with event: NSEvent) {
         guard let window = self.window else { return }
 
-        let startFrame = window.frame
+        // 비율은 반드시 **콘텐츠** 기준으로 잡는다.
+        // 제목표시줄이 있는 창(Window 버튼으로 여는 창)에서 창 프레임 기준으로 계산하면
+        // 프레임 비율(콘텐츠+타이틀바)을 유지하려다 콘텐츠가 정사각형에서 어긋나고,
+        // 그 어긋난 만큼 창이 끈 것보다 커진다. 테두리 없는 위젯은 콘텐츠 = 프레임이라 동일하게 동작.
+        let startContent = window.contentRect(forFrameRect: window.frame)
+        let chromeHeight = window.frame.height - startContent.height   // 제목표시줄 높이 (위젯은 0)
         let startMouse = NSEvent.mouseLocation          // 화면 좌표(좌하단 원점)
-        let aspect = startFrame.width / startFrame.height
-        let minSize = window.minSize
+        let aspect = startContent.width / startContent.height
+        // 최소 크기도 콘텐츠 기준으로 환산 — 프레임 기준 값을 그대로 쓰면 타이틀바만큼 과하게 잘린다.
+        let minSize = NSSize(
+            width:  max(80, window.minSize.width),
+            height: max(80, window.minSize.height - chromeHeight)
+        )
 
         let content = window.contentView
         content?.viewWillStartLiveResize()
@@ -645,17 +826,20 @@ final class ResizeHandleNSView: NSView {
                 // 이동량이 그대로 반영돼 "따라오는" 느낌이 유지된다.
                 let h = (aspect * dW + dH) / (aspect * aspect + 1)
 
-                var newH = startFrame.height + h
+                var newH = startContent.height + h
                 var newW = newH * aspect
                 // 최소 크기 클램프 (비율 유지)
                 if newW < minSize.width  { newW = minSize.width;  newH = newW / aspect }
                 if newH < minSize.height { newH = minSize.height; newW = newH * aspect }
 
-                let newY = startFrame.maxY - newH         // 상단 가장자리 고정
-                window.setFrame(
-                    NSRect(x: startFrame.origin.x, y: newY, width: newW, height: newH),
-                    display: true
+                // 콘텐츠 사각형을 만들어 프레임으로 환산 — 상단 가장자리 고정
+                let newContent = NSRect(
+                    x: startContent.origin.x,
+                    y: startContent.maxY - newH,
+                    width: newW,
+                    height: newH
                 )
+                window.setFrame(window.frameRect(forContentRect: newContent), display: true)
 
             default:
                 break
@@ -779,6 +963,8 @@ struct TimerWidgetView: View {
 
     private var ringColor: Color {
         if entry.isFinished { return Color(red: 1, green: 0.22, blue: 0.37) }
+        // 뽀모도로는 링 색으로 집중/휴식을 구분한다.
+        if entry.isPomodoro { return entry.phase.color }
         return textColor.opacity(0.85)
     }
 
@@ -925,7 +1111,18 @@ struct TimerWidgetView: View {
                     .contentTransition(.numericText(countsDown: true))
                     .animation(.linear(duration: 0.3), value: entry.remaining)
 
-                if !entry.isRunning && !entry.name.isEmpty {
+                // 뽀모도로는 실행 중에도 현재 구간을 계속 보여준다 — 남은 시간만으로는
+                // 지금이 집중인지 휴식인지 알 수 없기 때문.
+                if entry.isPomodoro {
+                    HStack(spacing: 3) {
+                        Image(systemName: entry.phase.icon)
+                            .font(.system(size: max(8, 10 * scale), weight: .bold))
+                        Text("\(entry.phase.title) · #\(entry.cycleNumber)")
+                            .font(.system(size: max(9, 12 * scale), weight: .semibold))
+                    }
+                    .foregroundStyle(entry.phase.color)
+                    .lineLimit(1)
+                } else if !entry.isRunning && !entry.name.isEmpty {
                     Text(entry.name)
                         .font(.system(size: max(9, 11 * scale), weight: .medium))
                         .foregroundStyle(textColor.opacity(0.6))
@@ -934,6 +1131,7 @@ struct TimerWidgetView: View {
                 }
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: entry.isRunning)
+            .animation(.easeInOut(duration: 0.25), value: entry.phase)
         }
         .padding(max(12, 26 * scale))
     }

@@ -50,7 +50,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
             let screenFrame = NSScreen.main?.visibleFrame ?? .zero
             noteManager.addNote(
-                text: "👋 StickyPresenter Guide\n\n📌 Drag to move a note\n🖱 Hover to show controls\n🎨 Adjust color · opacity · font size\n🔒 Lock button prevents editing\n\n⌘⌃N  New sticky note\n⌘⌃T  Open timers\n⌘⌃P  Teleprompter\n⌘⌃S  Show all notes\n⌘⌃H  Hide all notes\n\n💡 You can also create a sticky note\n   right from the timer controls!",
+                text: "👋 StickyPresenter Guide\n\n📌 Drag to move a note\n🖱 Hover to show controls\n🎨 Adjust color · opacity · font size\n🔒 Lock button prevents editing\n\n⌘⌃N  New sticky note\n⌘⌃T  Open timers\n⌘⌃B  Pomodoro (25/5)\n⌘⌃P  Teleprompter\n⌘⌃S  Show all notes\n⌘⌃H  Hide all notes\n\n💡 You can also create a sticky note\n   right from the timer controls!",
                 color: .yellow,
                 position: CGPoint(x: screenFrame.minX + 60, y: screenFrame.midY - 100)
             )
@@ -92,6 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             case 9:  self.addNoteFromClipboard() // ⌘⌃V
             case 35: self.openTeleprompter()     // ⌘⌃P
             case 17: self.noteManager.toggleTimerHotkey() // ⌘⌃T
+            case 11: self.noteManager.startPomodoro()     // ⌘⌃B
             case 1:  self.noteManager.showAllNotes()      // ⌘⌃S
             case 4:  self.noteManager.hideAllNotes()      // ⌘⌃H
             default: break
@@ -126,6 +127,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let timerItem = NSMenuItem(title: "⏱ Timers", action: #selector(openTimer), keyEquivalent: "t")
         timerItem.keyEquivalentModifierMask = [.command, .control]
         menu.addItem(timerItem)
+
+        let pomodoroItem = NSMenuItem(title: "🍅 Pomodoro (25/5)", action: #selector(startPomodoro), keyEquivalent: "b")
+        pomodoroItem.keyEquivalentModifierMask = [.command, .control]
+        menu.addItem(pomodoroItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -204,6 +209,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func openTimer() {
         noteManager.openTimerList()
+    }
+
+    // 클래식 25분 집중 / 5분 휴식 — 멈출 때까지 무한 반복
+    @objc func startPomodoro() {
+        noteManager.startPomodoro()
     }
 
     @objc func openTeleprompter() {
