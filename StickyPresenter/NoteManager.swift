@@ -249,6 +249,10 @@ class NoteManager: ObservableObject {
         )
         widgetHostingView.wantsLayer = true
         widgetHostingView.layer?.backgroundColor = CGColor(gray: 0, alpha: 0)
+        // SwiftUI가 창 크기에 관여하지 못하게 끊는다 (제목 있는 창과 동일).
+        // 기본값이면 NSHostingView가 콘텐츠의 이상적/최소 크기로 제약을 걸어,
+        // 리사이즈 중 우리가 넘긴 프레임 위에 자기 크기를 덧씌울 수 있다.
+        if #available(macOS 13.0, *) { widgetHostingView.sizingOptions = [] }
         window.contentView = widgetHostingView
         window.orderFront(nil)
         entry.widgetPanel = window

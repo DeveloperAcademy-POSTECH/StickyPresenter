@@ -770,14 +770,30 @@ struct CornerGrip: Shape {
 
 // MARK: - Native Resize Handle
 // 투명 NSView. mouseDown 시 OS 이벤트 추적 루프(trackEvents)를 돌려
-// 네이티브 가장자리 리사이즈와 동일한 이벤트 레이트로 윈도우를 조절하고,
-// 시작 시점의 가로:세로 비율을 보존한다.
+// 네이티브 가장자리 리사이즈와 동일한 이벤트 레이트로 윈도우를 조절한다.
+// 창은 항상 정사각형으로 유지되며, 크기는 마우스의 세로 이동량에만 비례한다.
 struct NativeResizeHandle: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { ResizeHandleNSView() }
     func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 final class ResizeHandleNSView: NSView {
+    // 이 값이 true(투명 뷰의 기본값)면 isMovableByWindowBackground 창에서 AppKit이
+    // 그립 위 클릭까지 "창 끌기"로 가져가, 리사이즈 대신(또는 리사이즈와 동시에) 창이 이동한다.
+    // 리사이즈 핸들에서는 반드시 꺼야 한다.
+    override var mouseDownCanMoveWindow: Bool { false }
+
+    /// 마우스 수직 이동량 대비 창이 자라는 비율. 1.0 이면 마우스와 1:1.
+    ///
+    /// 1:1은 실측상 정확했지만("마우스Δy=75.3 → 크기 200→276") 손으로 써보니 너무 빨랐다.
+    /// 위젯이 200pt로 작아서 같은 75pt라도 원래 크기의 +38%가 되고, Retina에서는
+    /// 픽셀 152개가 늘어나 체감이 훨씬 크기 때문이다. 그래서 절반으로 낮춘다.
+    /// 참고로 macOS 네이티브 비율고정 창(정사영 방식)도 정사각형·수직 드래그에서 정확히 0.5다.
+    ///
+    /// 0.5도 여전히 빠르다는 피드백을 받아 0.25로 다시 낮췄다 — 아래로 100 끌면 25 자란다.
+    /// 더 느리게 하려면 이 값만 낮추면 된다 (0.15 → 아래로 100 끌면 15 자람).
+    private static let resizeGain: CGFloat = 0.25
+
     override func resetCursorRects() {
         // 대각 리사이즈에 대응하는 공개 커서가 없어 crosshair로 표시
         addCursorRect(bounds, cursor: .crosshair)
@@ -793,7 +809,10 @@ final class ResizeHandleNSView: NSView {
         let startContent = window.contentRect(forFrameRect: window.frame)
         let chromeHeight = window.frame.height - startContent.height   // 제목표시줄 높이 (위젯은 0)
         let startMouse = NSEvent.mouseLocation          // 화면 좌표(좌하단 원점)
-        let aspect = startContent.width / startContent.height
+        // 타이머 위젯은 **항상 정사각형**이 요구사항이므로 현재 크기에서 비율을 유도하지 않는다.
+        // 유도하면 창이 한 번이라도 정사각형에서 벗어났을 때 그 비율이 그대로 굳어버린다.
+        // 1로 고정하면 어긋난 창도 첫 리사이즈에서 정사각형으로 되돌아온다(self-healing).
+        let aspect: CGFloat = 1
         // 최소 크기도 콘텐츠 기준으로 환산 — 프레임 기준 값을 그대로 쓰면 타이틀바만큼 과하게 잘린다.
         let minSize = NSSize(
             width:  max(80, window.minSize.width),
@@ -817,22 +836,31 @@ final class ResizeHandleNSView: NSView {
 
             case .leftMouseDragged:
                 let mouse = NSEvent.mouseLocation
-                let dW = mouse.x - startMouse.x          // 오른쪽으로 끌면 +
                 let dH = startMouse.y - mouse.y          // 아래로 끌면 +
 
-                // 비율을 유지하려면 (Δ가로, Δ세로)가 반드시 Δ가로 = aspect × Δ세로 위에 놓여야 한다.
-                // 마우스 이동량을 그 직선에 정사영(수직으로 내림) → 커서에서 가장 가까운 모서리 위치.
-                // 대각선 방향으로 끌면 모서리가 포인터에 정확히 붙고, 한 축으로만 끌어도
-                // 이동량이 그대로 반영돼 "따라오는" 느낌이 유지된다.
-                let h = (aspect * dW + dH) / (aspect * aspect + 1)
-
-                var newH = startContent.height + h
+                // 크기는 **마우스의 수직 이동량만** 으로 결정하고, 너비는 비율(정사각형)대로 따라간다.
+                // 자라는 양은 resizeGain 배 — 아래로 100 끌면 25 자란다. 세로 이동량에만 비례하므로
+                // 배율이 얼마든 "끈 만큼에 비례해서" 커지는 예측 가능한 움직임은 유지된다.
+                //
+                // 가로 이동량은 의도적으로 무시한다. 비율이 고정된 이상 모서리가 포인터를 항상
+                // 따라가는 것은 기하학적으로 불가능하고(가능한 위치는 Δ가로 = aspect × Δ세로
+                // 직선 위뿐), 정사영처럼 두 축을 섞으면 세로로만 끌었을 때 절반만 자라 답답해진다.
+                // 세로 하나만 기준으로 삼으면 "끈 만큼 높이가 커지고 너비는 비율만큼"이라
+                // 움직임이 그대로 예측된다. 가로 드래그가 크기를 바꾸지 않는 것은 의도된 동작.
+                var newH = startContent.height + dH * Self.resizeGain
                 var newW = newH * aspect
                 // 최소 크기 클램프 (비율 유지)
                 if newW < minSize.width  { newW = minSize.width;  newH = newW / aspect }
                 if newH < minSize.height { newH = minSize.height; newW = newH * aspect }
 
-                // 콘텐츠 사각형을 만들어 프레임으로 환산 — 상단 가장자리 고정
+                // 콘텐츠 사각형을 만들어 프레임으로 환산 — **좌상단 모서리 고정**.
+                // 우하단을 끌면 좌상단이 제자리에 있는 것이 표준 리사이즈 동작이므로 이쪽으로 확정.
+                // 창은 오른쪽·아래로 자란다.
+                //
+                // 알려진 특성(버그 아님): 좌상단 고정 + 정사각형이면 우하단 그립은 항상 45°
+                // 대각선으로 움직인다. 마우스를 45°보다 가파르게 끌면 그립이 마우스보다 멀리 간다
+                // (아래로만 100 끌면 그립은 141 이동). 우상단 고정으로 바꾸면 사라지지만
+                // 그때는 창이 왼쪽으로 퍼져 표준 동작에서 벗어나므로 채택하지 않았다.
                 let newContent = NSRect(
                     x: startContent.origin.x,
                     y: startContent.maxY - newH,
@@ -1081,7 +1109,10 @@ struct TimerWidgetView: View {
                 .padding(9)          // 그립 그림만 안쪽으로 — 히트 영역은 모서리까지 유지
                 .allowsHitTesting(false)
         }
-        .frame(width: 33, height: 33)
+        // 히트 영역 48×48. 이 바깥은 전부 isMovableByWindowBackground 영역이라
+        // 빗나가면 리사이즈가 아니라 "창 이동"이 되고, 그러면 좌상단이 마우스를 따라 움직인다.
+        // 33이면 둥근 모서리에서 빗나가기 쉬워 키웠다. (그림은 여전히 13×13)
+        .frame(width: 48, height: 48)
         .help("Drag to resize")
     }
 
