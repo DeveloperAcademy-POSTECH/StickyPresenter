@@ -16,5 +16,9 @@
 	<array>
 		<string>QGAQ3AY3R3.group.com.leeo.StickyPresenter</string>
 	</array>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.network.server</key>
+	<true/>
 </dict>
 </plist>

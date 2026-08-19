@@ -1,0 +1,40 @@
+name: StickyPresenterRemote
+options:
+  bundleIdPrefix: com.leeo
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+  StickyPresenterRemote:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      # Mac 앱과 **같은 파일**을 참조한다. 복사본을 두면 한쪽만 고쳤을 때
+      # 디코딩이 조용히 깨지므로 반드시 원본을 공유할 것.
+      - path: ../Shared/RemoteProtocol.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.leeo.StickyPresenter.Remote
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Timer Remote
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # MultipeerConnectivity 는 iOS 14+ 에서 로컬 네트워크 권한과
+        # Bonjour 서비스 사전 선언이 없으면 상대를 아예 못 찾는다.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: 같은 네트워크에 있는 Mac의 StickyPresenter를 찾아 타이머를 조작합니다.
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: Sources/Info.plist
+      properties:
+        NSBonjourServices:
+          - _sp-timer._tcp
+          - _sp-timer._udp
+        NSLocalNetworkUsageDescription: 같은 네트워크에 있는 Mac의 StickyPresenter를 찾아 타이머를 조작합니다.
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait

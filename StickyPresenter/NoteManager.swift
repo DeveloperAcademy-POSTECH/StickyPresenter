@@ -259,6 +259,24 @@ class NoteManager: ObservableObject {
         timerWidgetWindows[entry.id] = window
     }
 
+    /// 타이머 창을 프리셋 크기(S/M/L)로 맞춘다.
+    /// **좌상단을 고정**해 모서리 드래그와 같은 기준으로 커지고 작아진다 —
+    /// 크기만 바뀌고 창이 튀어 다른 자리로 가지 않는다.
+    /// 위젯 창과 (열려 있다면) 제목 있는 창을 함께 맞춘다.
+    func setWidgetSize(_ size: WidgetSize, for entry: TimerEntry) {
+        entry.widgetSize = size
+        let side = size.side
+
+        for window in [entry.widgetPanel, timerPresentationWindows[entry.id]].compactMap({ $0 }) {
+            let content = window.contentRect(forFrameRect: window.frame)
+            let newContent = NSRect(x: content.minX,
+                                    y: content.maxY - side,   // 윗변 고정
+                                    width: side, height: side)
+            window.setFrame(window.frameRect(forContentRect: newContent),
+                            display: true, animate: true)
+        }
+    }
+
     /// 카멜레온 샘플링에서 제외할 창 목록 — 타이머 위젯 창과 제목 있는 타이머 창 전부.
     /// 자기 자신이 캡처에 들어가면 자기 색을 다시 읽어 칠하는 피드백 루프가 생긴다.
     func allTimerWindows() -> [NSWindow] {

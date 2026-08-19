@@ -1,6 +1,24 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Widget Size
+/// 타이머 창 프리셋 크기. 모서리 드래그로 자유롭게 조절할 수도 있지만,
+/// 발표 중에 정확히 같은 크기로 되돌리기는 어렵다. S/M/L 로 한 번에 맞춘다.
+enum WidgetSize: String, CaseIterable {
+    case small  = "S"
+    case medium = "M"
+    case large  = "L"
+
+    /// 콘텐츠 한 변의 길이(pt). 창은 항상 정사각형이다.
+    var side: CGFloat {
+        switch self {
+        case .small:  return 200   // 기본값 — 슬라이드 구석에 놓아도 안 거슬리는 크기
+        case .medium: return 300
+        case .large:  return 420   // 화면 공유·먼 거리에서 읽히는 크기
+        }
+    }
+}
+
 // MARK: - Widget Theme
 enum WidgetTheme: String, CaseIterable {
     case system     // 시스템 외형 따름
@@ -86,8 +104,13 @@ class TimerEntry: ObservableObject, Identifiable {
     var isLocating: Bool = false {
         willSet { if !isInvalidated { objectWillChange.send() } }
     }
-    // 위젯 테마 (시스템 / 라이트 / 다크 반전)
+    // 위젯 테마 (시스템 / 라이트 / 다크 반전 / 카멜레온)
     var theme: WidgetTheme = .system {
+        willSet { if !isInvalidated { objectWillChange.send() } }
+    }
+    /// 마지막으로 고른 프리셋 크기. 모서리 드래그로 직접 조절하면 이 값과 어긋날 수 있고,
+    /// 그때는 S/M/L 버튼이 "그 크기로 되돌리는" 역할을 한다.
+    var widgetSize: WidgetSize = .small {
         willSet { if !isInvalidated { objectWillChange.send() } }
     }
     /// 뽀모도로 설정. nil이면 한 번 울리고 끝나는 일반 타이머.
@@ -672,7 +695,25 @@ struct TimerRowView: View {
                     .buttonStyle(.plain)
                     .help("Theme: \(entry.theme.rawValue)")
 
-                    Color.clear.frame(maxWidth: .infinity, minHeight: 0)
+                    // 프리셋 크기 S / M / L
+                    HStack(spacing: 3) {
+                        ForEach(WidgetSize.allCases, id: \.self) { size in
+                            let isCurrent = entry.widgetSize == size
+                            Button(action: { NoteManager.shared.setWidgetSize(size, for: entry) }) {
+                                Text(size.rawValue)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(isCurrent ? Color.accentColor : .secondary)
+                                    .frame(width: 26, height: 30)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(isCurrent ? Color.accentColor.opacity(0.12)
+                                                            : Color.primary.opacity(0.06))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help("Widget size: \(size.rawValue) (\(Int(size.side))pt)")
+                        }
+                    }
 
                     Button(action: onRemove) {
                         Image(systemName: "xmark")
@@ -750,6 +791,63 @@ struct TimerRowView: View {
         return h > 0
             ? String(format: "%d:%02d:%02d", h, m, s)
             : String(format: "%02d:%02d", m, s)
+    }
+}
+
+// MARK: - Rounded Rect Progress Shape
+// 진행 표시를 원이 아니라 **창 자신의 둥근 사각형 윤곽**으로 그린다.
+//
+// 사각형을 쓰는 진짜 이유는 모양이 달라서가 아니라 **네 꼭짓점이 눈금 역할**을 하기 때문이다.
+// 원에는 기준점이 없어서 "지금 몇 % 지났나"를 각도로 눈대중해야 한다.
+// 좌상단 꼭짓점에서 출발해 시계방향으로 돌면 꼭짓점이 정확히 0 / 25 / 50 / 75% 에 떨어진다.
+// (둘레 = 4 × (직선 + 호) 이고 꼭짓점 사이 간격이 정확히 그 1/4이다)
+//
+//        0%
+//        ┌────────┐ 25%
+//        │        │
+//        │        │
+//   75%  └────────┘ 50%
+//
+// "오른쪽 변을 타고 있으면 1/4 ~ 1/2 사이" 처럼 숫자를 읽지 않고도 구간이 파악된다.
+// 발표 중 흘긋 보는 용도에서는 이게 남은 시간 숫자보다 빠르다.
+//
+// 덤으로 정사각형 창에서 원이 버리던 네 모서리 공간이 살아나 숫자를 크게 쓸 수 있다.
+struct RoundedRectProgress: Shape {
+    var cornerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        // 반지름이 변 길이의 절반을 넘으면 모서리가 겹쳐 경로가 뒤집힌다.
+        let r = min(cornerRadius, min(rect.width, rect.height) / 2)
+
+        let topLeft     = CGPoint(x: rect.minX + r, y: rect.minY + r)
+        let topRight    = CGPoint(x: rect.maxX - r, y: rect.minY + r)
+        let bottomRight = CGPoint(x: rect.maxX - r, y: rect.maxY - r)
+        let bottomLeft  = CGPoint(x: rect.minX + r, y: rect.maxY - r)
+
+        // y축이 아래로 향하는 좌표계라 각도가 커질수록 화면상 시계방향으로 돈다.
+        // 좌상단 꼭짓점의 "대각선 지점"인 225°에서 출발해야 꼭짓점이 1/4 눈금에 맞는다.
+        func point(_ center: CGPoint, _ degrees: CGFloat) -> CGPoint {
+            let a = degrees * .pi / 180
+            return CGPoint(x: center.x + r * cos(a), y: center.y + r * sin(a))
+        }
+
+        var p = Path()
+        p.move(to: point(topLeft, 225))
+        p.addArc(center: topLeft, radius: r,
+                 startAngle: .degrees(225), endAngle: .degrees(270), clockwise: false)
+        p.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+        p.addArc(center: topRight, radius: r,
+                 startAngle: .degrees(270), endAngle: .degrees(360), clockwise: false)   // 25%가 이 호의 한가운데
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
+        p.addArc(center: bottomRight, radius: r,
+                 startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)      // 50%
+        p.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
+        p.addArc(center: bottomLeft, radius: r,
+                 startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)    // 75%
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
+        p.addArc(center: topLeft, radius: r,
+                 startAngle: .degrees(180), endAngle: .degrees(225), clockwise: false)   // 출발점으로 복귀
+        return p
     }
 }
 
@@ -1105,7 +1203,7 @@ struct TimerWidgetView: View {
             return
         }
         // 모드로 들어오는 순간 권한을 확인한다 — 없으면 시스템 프롬프트가 뜬다.
-        ChameleonSampler.shared.ensureAuthorization()
+        await ChameleonSampler.shared.ensureAuthorization()
 
         while !Task.isCancelled {
             if let window = hostWindow {
@@ -1184,21 +1282,29 @@ struct TimerWidgetView: View {
 
     // MARK: - Ring + Time (scale에 비례)
     private func ringContent(side: CGFloat, scale: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .stroke(trackColor, lineWidth: max(4, 10 * scale))
+        let lineWidth = max(4, 10 * scale)
+        // 배경(cornerRadius 24)과 동심을 이루도록 인셋만큼 반지름을 줄인다.
+        let inset = lineWidth / 2 + max(3, 7 * scale)
+        let radius = max(6, 24 - inset)
 
-            Circle()
+        return ZStack {
+            RoundedRectProgress(cornerRadius: radius)
+                .stroke(trackColor, style: StrokeStyle(lineWidth: lineWidth, lineJoin: .round))
+
+            RoundedRectProgress(cornerRadius: radius)
                 .trim(from: 0, to: max(0, 1 - entry.progress))
-                .stroke(ringColor, style: StrokeStyle(lineWidth: max(4, 10 * scale), lineCap: .round))
-                .rotationEffect(.degrees(-90))
+                .stroke(ringColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
                 .animation(.linear(duration: 1), value: entry.progress)
 
             VStack(spacing: 4) {
+                // 윤곽선으로 옮기면서 내부가 통째로 비었으므로 숫자를 크게 쓴다 (38 → 52).
+                // 창이 작아도 넘치지 않도록 한 줄 고정 + 축소 허용.
                 Text(formatTime(entry.remaining))
-                    .font(.system(size: max(16, 38 * scale), weight: .bold, design: .rounded))
+                    .font(.system(size: max(18, 52 * scale), weight: .bold, design: .rounded))
                     .foregroundStyle(textColor)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .contentTransition(.numericText(countsDown: true))
                     .animation(.linear(duration: 0.3), value: entry.remaining)
 
@@ -1223,8 +1329,10 @@ struct TimerWidgetView: View {
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: entry.isRunning)
             .animation(.easeInOut(duration: 0.25), value: entry.phase)
+            // 숫자가 윤곽선에 닿지 않도록 선 두께만큼 안쪽으로
+            .padding(.horizontal, lineWidth + max(4, 8 * scale))
         }
-        .padding(max(12, 26 * scale))
+        .padding(inset)
     }
 
     private func formatTime(_ t: TimeInterval) -> String {

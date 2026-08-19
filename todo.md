@@ -21,6 +21,31 @@
 - [ ] `v1.0.3` 태그 생성 (버전 상향·릴리즈 노트는 완료)
 
 ## 완료
+- [x] iOS 리모컨 앱 (MultipeerConnectivity) — `StickyPresenterRemote/` (1.0.4)
+  - **별도 Xcode 프로젝트**다. 기존 프로젝트는 파일 동기화 그룹을 안 쓰고 pbxproj 수동 편집이
+    필요해서, iOS 타겟을 끼워 넣는 대신 `xcodegen`(`project.yml`)으로 새 프로젝트를 만들었다.
+    수정 후에는 `cd StickyPresenterRemote && xcodegen generate` 를 다시 돌릴 것.
+  - 프로토콜은 `Shared/RemoteProtocol.swift` **한 파일을 두 프로젝트가 함께 참조**한다
+    (복사본을 두면 한쪽만 고쳤을 때 디코딩이 조용히 깨진다).
+  - Mac = 광고자(`RemoteControlHost`), iOS = 탐색자(`RemoteClient`). 초대는 자동 수락 —
+    발표 직전에 수락 다이얼로그를 띄우면 오히려 방해가 된다.
+  - 상태는 1초마다 **전체**를 `.unreliable` 로 브로드캐스트. 델타 동기화는 복잡도만 늘고,
+    패킷을 놓쳐도 다음 초에 저절로 복구된다. 명령은 재전송이 없으므로 `.reliable`.
+  - 지원 명령: 재생/일시정지, ±30s, 초기화, 크기 S/M/L, 테마 순환, 감추기/표시, 정렬, 삭제,
+    프리셋 추가(3m/5m/10m/15m).
+  - **권한 설정이 핵심** — 빠지면 상대를 아예 못 찾는다
+    - macOS entitlements: `network.client`, `network.server` 추가함
+    - 양쪽 Info.plist: `NSBonjourServices` (`_sp-timer._tcp` / `._udp`), `NSLocalNetworkUsageDescription`
+    - 서비스 타입 `sp-timer` 는 1~15자·소문자/숫자/하이픈 제약을 지킨 값
+  - [ ] 실기기 연결 테스트 미완료 — 시뮬레이터는 MultipeerConnectivity 동작이 제한적이라
+        iPhone 실기기로 확인 필요
+  - [ ] 리모컨 앱 서명·번들ID(`com.leeo.StickyPresenter.Remote`) 배포 계획 미정
+- [x] 타이머 창 프리셋 크기 S/M/L (1.0.4)
+  - `WidgetSize` (S 200 / M 300 / L 420pt). 타이머 행 3번째 줄에 세그먼트 버튼으로 배치
+  - `NoteManager.setWidgetSize(_:for:)` — **좌상단 고정**으로 모서리 드래그와 같은 기준.
+    위젯 창과 (열려 있으면) 제목 있는 창을 함께 맞춘다
+  - 모서리 드래그로 직접 조절하면 `entry.widgetSize` 와 어긋날 수 있다. 그때 S/M/L 은
+    "그 크기로 되돌리는" 버튼으로 동작한다 — 의도된 것
 - [x] 카멜레온 모드 — 창 뒤 화면색을 읽어 배경으로, 나머지는 보색으로 (1.0.4)
   - `StickyPresenter/Chameleon.swift` 신규. `WidgetTheme` 에 `.chameleon` 추가
     (테마 버튼 순환: 시스템 → 라이트 → 다크 → 카멜레온, 아이콘 `eyedropper.halffull`)
