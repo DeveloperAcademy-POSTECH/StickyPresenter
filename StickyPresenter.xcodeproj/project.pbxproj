@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		08B27903A8BDC4667DAEDCAE /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F5EC97CF9B635926B756EDE7 /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		10490E49D9FD3DC6069F101F /* TimerMusic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BE47C9171723666D4987B6 /* TimerMusic.swift */; };
+		AAC0DE02AAC0DE02AAC0DE02 /* Chameleon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC0DE01AAC0DE01AAC0DE01 /* Chameleon.swift */; };
 		1E58EBD355CD262905414C5B /* TimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF99E57239D4D71B87840235 /* TimerView.swift */; };
 		2E61AA6885F159A58591C278 /* StickyNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93BDEA48650FA7A04F708DB /* StickyNoteView.swift */; };
 		4520B10FC76C4332457425D1 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B18F240C26BA63598B84FC /* Models.swift */; };
@@ -60,6 +61,7 @@
 		52DA15621F87984BF287F7FA /* WidgetSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSync.swift; sourceTree = "<group>"; };
 		57FC43C738503D17298F0CA1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		64BE47C9171723666D4987B6 /* TimerMusic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerMusic.swift; sourceTree = "<group>"; };
+		AAC0DE01AAC0DE01AAC0DE01 /* Chameleon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chameleon.swift; sourceTree = "<group>"; };
 		67845E0D54867A0253FA4103 /* TimerSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerSnapshot.swift; sourceTree = "<group>"; };
 		693CDC6530CDA0FE07D952D5 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
 		85B18F240C26BA63598B84FC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -102,6 +104,7 @@
 				410D2C3E3B48D9CF561B79A0 /* Assets.xcassets */,
 				F1F693E1CBCB5DD0A681806F /* Info.plist */,
 				85B18F240C26BA63598B84FC /* Models.swift */,
+				AAC0DE01AAC0DE01AAC0DE01 /* Chameleon.swift */,
 				EF4329275C9703866DAC1970 /* NoteManager.swift */,
 				D93BDEA48650FA7A04F708DB /* StickyNoteView.swift */,
 				BB4D2110261E5FD4C4CFCBE4 /* StickyPresenterApp.swift */,
@@ -264,6 +267,7 @@
 				10490E49D9FD3DC6069F101F /* TimerMusic.swift in Sources */,
 				C98F6A75B3B17F66D056B410 /* TimerSnapshot.swift in Sources */,
 				1E58EBD355CD262905414C5B /* TimerView.swift in Sources */,
+				AAC0DE02AAC0DE02AAC0DE02 /* Chameleon.swift in Sources */,
 				9247BED7BC2C17F8896286B4 /* WidgetSync.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

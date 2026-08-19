@@ -259,6 +259,12 @@ class NoteManager: ObservableObject {
         timerWidgetWindows[entry.id] = window
     }
 
+    /// 카멜레온 샘플링에서 제외할 창 목록 — 타이머 위젯 창과 제목 있는 타이머 창 전부.
+    /// 자기 자신이 캡처에 들어가면 자기 색을 다시 읽어 칠하는 피드백 루프가 생긴다.
+    func allTimerWindows() -> [NSWindow] {
+        Array(timerWidgetWindows.values) + Array(timerPresentationWindows.values)
+    }
+
     // MARK: - Snap widget next to the timer list panel
     func snapWidgetToPanel(for entry: TimerEntry) {
         guard let widgetPanel = entry.widgetPanel,

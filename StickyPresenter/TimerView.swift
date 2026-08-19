@@ -3,23 +3,26 @@ import AppKit
 
 // MARK: - Widget Theme
 enum WidgetTheme: String, CaseIterable {
-    case system   // 시스템 외형 따름
-    case light    // 밝은 테마
-    case dark     // 어두운(반전) 테마
+    case system     // 시스템 외형 따름
+    case light      // 밝은 테마
+    case dark       // 어두운(반전) 테마
+    case chameleon  // 창 뒤 화면 색을 읽어 배경으로 쓰고, 나머지는 그 보색으로
 
     var icon: String {
         switch self {
-        case .system: return "circle.lefthalf.filled"
-        case .light:  return "sun.max.fill"
-        case .dark:   return "moon.fill"
+        case .system:    return "circle.lefthalf.filled"
+        case .light:     return "sun.max.fill"
+        case .dark:      return "moon.fill"
+        case .chameleon: return "eyedropper.halffull"
         }
     }
 
     var next: WidgetTheme {
         switch self {
-        case .system: return .light
-        case .light:  return .dark
-        case .dark:   return .system
+        case .system:    return .light
+        case .light:     return .dark
+        case .dark:      return .chameleon
+        case .chameleon: return .system
         }
     }
 }
@@ -784,15 +787,20 @@ final class ResizeHandleNSView: NSView {
     override var mouseDownCanMoveWindow: Bool { false }
 
     /// 마우스 수직 이동량 대비 창이 자라는 비율. 1.0 이면 마우스와 1:1.
+    /// **아래로 100 끌면 100 자란다 (화면상 커서와 같은 픽셀만큼).**
     ///
     /// 1:1은 실측상 정확했지만("마우스Δy=75.3 → 크기 200→276") 손으로 써보니 너무 빨랐다.
-    /// 위젯이 200pt로 작아서 같은 75pt라도 원래 크기의 +38%가 되고, Retina에서는
-    /// 픽셀 152개가 늘어나 체감이 훨씬 크기 때문이다. 그래서 절반으로 낮춘다.
-    /// 참고로 macOS 네이티브 비율고정 창(정사영 방식)도 정사각형·수직 드래그에서 정확히 0.5다.
+    /// 창이 200pt로 작아서 같은 75pt라도 원래 크기의 +38%가 되고, Retina에서는
+    /// 픽셀 152개가 늘어나 체감이 훨씬 크기 때문이다.
+    /// 참고로 macOS 네이티브 비율고정 창(정사영 방식)은 정사각형·수직 드래그에서 정확히 0.5다.
     ///
-    /// 0.5도 여전히 빠르다는 피드백을 받아 0.25로 다시 낮췄다 — 아래로 100 끌면 25 자란다.
-    /// 더 느리게 하려면 이 값만 낮추면 된다 (0.15 → 아래로 100 끌면 15 자람).
-    private static let resizeGain: CGFloat = 0.25
+    /// 손으로 맞춘 값이다: 1.0 → 0.5 → 0.25 → 0.4 → 0.45 → 0.6 → 다시 1.0.
+    /// 1.0 이 자연스러운 기준점인 이유: 마우스 좌표는 pt 단위인데 Retina 화면은 1pt = 2px 라,
+    /// 0.6 이면 커서가 화면에서 100px 움직일 때 창은 60px 만 자라 "손보다 덜 따라온다"고 느껴진다.
+    /// 1.0 이면 화면상 커서 이동 픽셀 수와 창이 자라는 픽셀 수가 일치한다.
+    /// 더 필요하면 1.0 을 넘겨도 된다 (1.5 → 100 끌면 150).
+    /// 조절이 필요하면 이 상수만 바꾸면 된다 (0.3 → 100 끌면 30, 0.5 → 100 끌면 50).
+    private static let resizeGain: CGFloat = 1.0
 
     override func resetCursorRects() {
         // 대각 리사이즈에 대응하는 공개 커서가 없어 crosshair로 표시
@@ -839,7 +847,7 @@ final class ResizeHandleNSView: NSView {
                 let dH = startMouse.y - mouse.y          // 아래로 끌면 +
 
                 // 크기는 **마우스의 수직 이동량만** 으로 결정하고, 너비는 비율(정사각형)대로 따라간다.
-                // 자라는 양은 resizeGain 배 — 아래로 100 끌면 25 자란다. 세로 이동량에만 비례하므로
+                // 자라는 양은 resizeGain 배 — 아래로 100 끌면 100 자란다. 세로 이동량에만 비례하므로
                 // 배율이 얼마든 "끈 만큼에 비례해서" 커지는 예측 가능한 움직임은 유지된다.
                 //
                 // 가로 이동량은 의도적으로 무시한다. 비율이 고정된 이상 모서리가 포인터를 항상
@@ -967,6 +975,9 @@ struct TimerWidgetView: View {
     var onClose: (() -> Void)? = nil   // windowed 모드에서만 닫기 버튼 표시
     @State private var isHovered = false
     @State private var finishPulse = false   // 완료 시 빨간 테두리 펄스
+    // 카멜레온 모드용 — 이 뷰가 올라간 창과, 그 뒤 화면에서 읽어낸 팔레트
+    @State private var hostWindow: NSWindow?
+    @State private var sampledPalette: ChameleonPalette?
     @State private var pulseTask: Task<Void, Never>? = nil
     @Environment(\.colorScheme) private var systemScheme
 
@@ -975,19 +986,35 @@ struct TimerWidgetView: View {
     private static let finishPulseDuration: Double = 0.5
 
     // MARK: - Theme palette
+    /// 카멜레온 모드에서 화면을 읽어 만든 팔레트. 아직 못 읽었으면 nil이고,
+    /// 그동안(그리고 권한이 없을 때는 계속) 기존 시스템 테마로 그린다.
+    private var chameleon: ChameleonPalette? {
+        entry.theme == .chameleon ? sampledPalette : nil
+    }
+
     private var isDark: Bool {
+        if let chameleon { return chameleon.isDark }
         switch entry.theme {
-        case .system: return systemScheme == .dark
-        case .light:  return false
-        case .dark:   return true
+        case .system:    return systemScheme == .dark
+        case .light:     return false
+        case .dark:      return true
+        case .chameleon: return systemScheme == .dark   // 샘플링 전 임시
         }
     }
     private var bgColor: Color {
-        isDark ? Color(red: 0.13, green: 0.13, blue: 0.14)
-               : Color(red: 0.98, green: 0.98, blue: 0.99)
+        if let chameleon { return chameleon.background }
+        return isDark ? Color(red: 0.13, green: 0.13, blue: 0.14)
+                      : Color(red: 0.98, green: 0.98, blue: 0.99)
     }
-    private var textColor: Color { isDark ? .white : .black }
-    private var trackColor: Color { (isDark ? Color.white : Color.black).opacity(0.12) }
+    /// 링·글자 색. 카멜레온 모드에서는 배경의 **보색**이다.
+    private var textColor: Color {
+        if let chameleon { return chameleon.accent }
+        return isDark ? .white : .black
+    }
+    private var trackColor: Color {
+        if let chameleon { return chameleon.track }
+        return (isDark ? Color.white : Color.black).opacity(0.12)
+    }
 
     private var ringColor: Color {
         if entry.isFinished { return Color(red: 1, green: 0.22, blue: 0.37) }
@@ -1061,6 +1088,39 @@ struct TimerWidgetView: View {
         .onChange(of: entry.isFinished) { finished in updatePulse(finished) }
         .onAppear { updatePulse(entry.isFinished) }
         .onDisappear { pulseTask?.cancel(); pulseTask = nil }
+        // 샘플링하려면 창의 화면상 위치가 필요한데 SwiftUI만으로는 알 수 없다.
+        .background(WindowReader { window in
+            if hostWindow !== window { hostWindow = window }
+        })
+        // 카멜레온 모드일 때만 도는 폴링 루프. 테마가 바뀌면 .task(id:)가 알아서 재시작한다.
+        .task(id: entry.theme) { await runChameleonLoop() }
+    }
+
+    // MARK: - Chameleon
+    /// 창 뒤 화면색을 주기적으로 읽어 팔레트를 갱신한다.
+    /// 카멜레온 모드가 아니면 즉시 끝나고, 읽은 색은 기존 테마 대신 쓰인다.
+    private func runChameleonLoop() async {
+        guard entry.theme == .chameleon else {
+            sampledPalette = nil
+            return
+        }
+        // 모드로 들어오는 순간 권한을 확인한다 — 없으면 시스템 프롬프트가 뜬다.
+        ChameleonSampler.shared.ensureAuthorization()
+
+        while !Task.isCancelled {
+            if let window = hostWindow {
+                // 자기 자신을 포함한 타이머 창 전부를 캡처에서 뺀다.
+                // 빠뜨리면 자기가 칠한 색을 다시 읽어 칠하는 피드백 루프가 생긴다.
+                let excluded = NoteManager.shared.allTimerWindows()
+                if let color = await ChameleonSampler.shared.averageColorBehind(window, excluding: excluded) {
+                    let palette = ChameleonPalette(background: color)
+                    withAnimation(.easeInOut(duration: 0.45)) { sampledPalette = palette }
+                }
+            }
+            // 0.9초 주기 — 발표 중 슬라이드가 넘어가는 속도에는 충분하고
+            // 매 프레임 캡처하는 것에 비하면 배터리 부담이 거의 없다.
+            try? await Task.sleep(nanoseconds: 900_000_000)
+        }
     }
 
     // 완료 시 빨간 테두리 펄스 애니메이션 시작/정지
