@@ -10,11 +10,13 @@
 		06C96CF0E19E8D7948C0FA28 /* RemoteProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9EE070E32987838405727BC /* RemoteProtocol.swift */; };
 		506154922BACDBC8228173B5 /* RemoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCF09A7AEFAD8E25CE0980C /* RemoteApp.swift */; };
 		7BA01B7E3EC264C43A1D214F /* RemoteClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80E63ACA9C91C08DE2F60D7A /* RemoteClient.swift */; };
+		8A75839F453BCEC9CCF6C3AD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A33A3FC5F8ED9CE541B90283 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		351BC74F4AB16F25C0288CF7 /* StickyPresenterRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = StickyPresenterRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		80E63ACA9C91C08DE2F60D7A /* RemoteClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteClient.swift; sourceTree = "<group>"; };
+		A33A3FC5F8ED9CE541B90283 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AFCF09A7AEFAD8E25CE0980C /* RemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteApp.swift; sourceTree = "<group>"; };
 		B9EE070E32987838405727BC /* RemoteProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteProtocol.swift; sourceTree = "<group>"; };
 		DBDD214FE0506DEFA8BAAD9F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -24,6 +26,7 @@
 		16C08B0AB27E62581F7DD00B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				A33A3FC5F8ED9CE541B90283 /* Assets.xcassets */,
 				DBDD214FE0506DEFA8BAAD9F /* Info.plist */,
 				AFCF09A7AEFAD8E25CE0980C /* RemoteApp.swift */,
 				80E63ACA9C91C08DE2F60D7A /* RemoteClient.swift */,
@@ -73,6 +76,7 @@
 			buildConfigurationList = F0F85DF00E5F87192EE9C8C3 /* Build configuration list for PBXNativeTarget "StickyPresenterRemote" */;
 			buildPhases = (
 				ADBAFA562CDC1323111C97EA /* Sources */,
+				4DC062D096A983CE0F78AAF9 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -118,6 +122,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4DC062D096A983CE0F78AAF9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8A75839F453BCEC9CCF6C3AD /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		ADBAFA562CDC1323111C97EA /* Sources */ = {

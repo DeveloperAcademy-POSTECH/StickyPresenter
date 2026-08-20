@@ -26,6 +26,15 @@
 - [ ] `v1.0.3` 태그 생성 (버전 상향·릴리즈 노트는 완료)
 
 ## 완료
+- [x] iOS 리모컨 앱 아이콘 (1.0.5)
+  - `StickyPresenterRemote/Sources/Assets.xcassets/AppIcon.appiconset/icon_1024.png`
+  - 생성기를 `StickyPresenterRemote/MakeIcon.swift` 로 함께 커밋했다 (`swift MakeIcon.swift out.png`).
+    Mac 아이콘 PNG에서 그라데이션 양 끝 색을 **직접 샘플링**하므로, Mac 아이콘 색이 바뀌면
+    다시 돌리기만 하면 두 앱 색이 계속 맞는다. 현재 값은 위 #FFD95B → 아래 #FFB013.
+  - 모티프는 앱의 새 정체성 — 둥근 사각형 진행 표시(트랙 + 절반 진행) + 우상단 1/4 점.
+    Mac 아이콘은 시계라 형태가 겹치지 않으면서 같은 색으로 형제처럼 읽힌다.
+  - iOS 아이콘은 정사각 **불투명** 이미지여야 한다(모서리 둥글리기는 시스템이 함) — alpha 없음 확인.
+  - `project.yml` 에 `ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon` 을 넣어야 재생성 후에도 유지된다.
 - [x] 1/4 지점 통과 시각 피드백 (1.0.4~1.0.5)
   - 25/50/75% 를 지나는 순간 **해당 꼭짓점에 점이 튀었다가 사라진다** (튀어나옴 → 0.65초 유지 →
     커지며 페이드아웃). 꼭짓점 좌표는 모서리 호의 대각선 지점이라 각 변에서 `r × (1 − √2/2)` 안쪽.
