@@ -1113,6 +1113,8 @@ struct TimerWidgetView: View {
     }
     /// 링·글자 색. 카멜레온 모드에서는 배경의 **보색**이다.
     private var textColor: Color {
+        // 마무리가 임박하면 무엇보다 먼저 눈에 들어와야 한다.
+        if isWarning { return adapted(Self.warningRed) }
         if let chameleon { return chameleon.accent }
         return isDark ? .white : .black
     }
@@ -1122,10 +1124,37 @@ struct TimerWidgetView: View {
     }
 
     private var ringColor: Color {
-        if entry.isFinished { return adapted(Color(red: 1, green: 0.22, blue: 0.37)) }
+        if entry.isFinished { return adapted(Self.finishedRed) }
+        // 경고는 뽀모도로 구간색보다 우선한다 — 휴식이 곧 끝난다는 것도 알아야 하기 때문.
+        if isWarning { return adapted(Self.warningRed) }
         // 뽀모도로는 링 색으로 집중/휴식을 구분한다.
         if entry.isPomodoro { return phaseColor }
         return textColor.opacity(0.85)
+    }
+
+    private static let warningRed = Color(red: 0.95, green: 0.26, blue: 0.21)
+    private static let finishedRed = Color(red: 1, green: 0.22, blue: 0.37)
+
+    // MARK: - 종료 임박 경고
+
+    /// 남은 시간이 이 값 이하로 떨어지면 붉은색으로 바뀐다.
+    ///
+    /// 비율(예: 남은 10%)로 정하지 않는다. 5분 타이머의 10%(30초)와 1시간 타이머의
+    /// 10%(6분)는 체감이 전혀 다르고, 짧은 타이머일수록 훨씬 늦게 알려야 쓸모가 있다.
+    /// 그래서 설정 시간대별 표로 둔다.
+    private var warningThreshold: TimeInterval {
+        switch entry.targetSeconds {
+        case ..<300:  return 10    // 5분 미만  → 마지막 10초
+        case ..<600:  return 60    // 10분 미만 → 마지막 1분
+        case ..<1800: return 120   // 30분 미만 → 마지막 2분
+        case ..<3600: return 180   // 1시간 미만 → 마지막 3분
+        default:      return 300   // 1시간 이상 → 마지막 5분
+        }
+    }
+
+    /// 완료 직전 구간인지. 이미 끝난 타이머는 완료 색이 따로 있으므로 제외한다.
+    private var isWarning: Bool {
+        !entry.isFinished && entry.remaining > 0 && entry.remaining <= warningThreshold
     }
 
     /// 뽀모도로 구간 색. 카멜레온 모드에서는 대비가 확보된 값으로 바뀐다.
@@ -1158,6 +1187,8 @@ struct TimerWidgetView: View {
                 ringContent(side: side, scale: scale)
                     .frame(width: geo.size.width, height: geo.size.height)
                     .opacity(isHiddenPeek ? 0 : 1)
+                    // 경고 구간에 들어설 때 색이 툭 바뀌지 않도록 부드럽게 넘긴다.
+                    .animation(.easeInOut(duration: 0.35), value: isWarning)
 
                 // 위치 표시 점선 테두리 — 감춤 상태에서 행 hover 시에만
                 RoundedRectangle(cornerRadius: 24)
