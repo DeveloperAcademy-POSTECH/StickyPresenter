@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 @main
 struct StickyPresenterRemoteApp: App {
@@ -42,16 +43,7 @@ struct RemoteRootView: View {
     @ViewBuilder
     private var content: some View {
         if !client.isConnected {
-            ContentUnavailableView {
-                Label("Mac을 찾는 중", systemImage: "wifi.slash")
-            } description: {
-                Text(client.status.label)
-            } actions: {
-                Text("Mac과 같은 Wi-Fi에 연결되어 있어야 합니다")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-            }
+            DisconnectedView()
         } else if client.timers.isEmpty {
             ContentUnavailableView {
                 Label("실행 중인 타이머 없음", systemImage: "timer")
@@ -91,6 +83,144 @@ struct RemoteRootView: View {
                     .frame(maxWidth: 110, alignment: .trailing)
             }
         }
+    }
+}
+
+// MARK: - Disconnected
+
+/// 연결이 안 됐을 때 **무엇을 확인해야 하는지**까지 같이 보여준다.
+/// MultipeerConnectivity 는 실패해도 원인을 알려주지 않아서, 상태 문구만 띄우면
+/// 사용자가 손댈 곳을 찾지 못한다. 실제로 걸리는 지점들을 순서대로 나열한다.
+struct DisconnectedView: View {
+    @EnvironmentObject private var client: RemoteClient
+
+    private struct Check: Identifiable {
+        let id = UUID()
+        let symbol: String
+        let title: String
+        let detail: String
+    }
+
+    private var checks: [Check] {
+        [
+            Check(symbol: "menubar.arrow.up.rectangle",
+                  title: "Mac에서 StickyPresenter가 켜져 있나요?",
+                  detail: "메뉴 막대에 타이머 아이콘이 보여야 합니다. 창을 모두 닫아도 앱은 메뉴 막대에 남아 있습니다."),
+            Check(symbol: "wifi",
+                  title: "두 기기가 같은 Wi-Fi인가요?",
+                  detail: "네트워크가 다르거나 게스트 Wi-Fi에 붙어 있으면 서로를 찾지 못합니다."),
+            Check(symbol: "lock.shield",
+                  title: "iPhone의 로컬 네트워크 접근을 허용했나요?",
+                  detail: "설정 → 개인정보 보호 및 보안 → 로컬 네트워크에서 Remote Controller를 켜주세요."),
+            Check(symbol: "desktopcomputer",
+                  title: "Mac에서도 허용이 필요할 수 있어요",
+                  detail: "시스템 설정 → 개인정보 보호 및 보안 → 로컬 네트워크에서 StickyPresenter를 확인하세요."),
+            Check(symbol: "network.badge.shield.half.filled",
+                  title: "VPN을 쓰고 있나요?",
+                  detail: "VPN이 켜져 있으면 같은 네트워크의 기기를 찾지 못할 수 있습니다. 잠시 꺼보세요.")
+        ]
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                header
+                checklist
+                settingsButton
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private var header: some View {
+        VStack(spacing: 10) {
+            Image(systemName: isFailed ? "exclamationmark.triangle" : "wifi.slash")
+                .font(.system(size: 42, weight: .light))
+                // 삼항으로 섞으면 Color 와 계층 스타일의 타입이 달라 컴파일되지 않는다.
+                .foregroundStyle(isFailed ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                .symbolEffect(.pulse, isActive: !isFailed)
+
+            Text(isFailed ? "연결할 수 없습니다" : "Mac을 찾는 중")
+                .font(.title3.weight(.semibold))
+
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 28)
+    }
+
+    /// 제목이 이미 "찾는 중"이라고 말하므로 상태 문구를 그대로 되풀이하지 않는다.
+    /// 상태마다 제목이 담지 못하는 정보만 덧붙인다.
+    private var subtitle: String {
+        switch client.status {
+        case .searching:
+            return "주변에서 StickyPresenter가 켜진 Mac을 찾고 있습니다"
+        case .connecting(let name):
+            return "\(name)에 연결하는 중입니다"
+        case .failed(let message):
+            return message
+        case .connected:
+            return ""
+        }
+    }
+
+    private var isFailed: Bool {
+        if case .failed = client.status { return true }
+        return false
+    }
+
+    private var checklist: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("확인해 보세요")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 12)
+
+            ForEach(Array(checks.enumerated()), id: \.element.id) { index, check in
+                if index > 0 {
+                    Divider().padding(.vertical, 12)
+                }
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: check.symbol)
+                        .font(.body)
+                        .foregroundStyle(.tint)
+                        .frame(width: 24, alignment: .center)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(check.title)
+                            .font(.subheadline.weight(.medium))
+                        Text(check.detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    // 두 줄 이상으로 흐르는 설명이 잘리지 않게 한다.
+                    .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+    }
+
+    private var settingsButton: some View {
+        Button {
+            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+            UIApplication.shared.open(url)
+        } label: {
+            Label("iPhone 설정 열기", systemImage: "gear")
+                .frame(maxWidth: .infinity, minHeight: 38)
+        }
+        .buttonStyle(.bordered)
     }
 }
 

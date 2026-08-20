@@ -26,6 +26,13 @@
 - [ ] `v1.0.3` 태그 생성 (버전 상향·릴리즈 노트는 완료)
 
 ## 완료
+- [x] 리모컨 미연결 화면에 원인 체크리스트 (1.0.5)
+  - MultipeerConnectivity 는 실패해도 원인을 알려주지 않는다. 상태 문구만 띄우면 사용자가
+    손댈 곳을 못 찾으므로, 실제로 걸리는 지점 5가지를 나열한다.
+    Mac 앱 실행 여부(메뉴 막대 전용이라 켜져 있는지 헷갈림) / 같은 Wi-Fi / iPhone 로컬 네트워크
+    권한 / Mac 로컬 네트워크 권한 / VPN. 설정 앱 바로 열기 버튼 포함.
+  - 제목("Mac을 찾는 중")과 부제가 같은 말을 되풀이하지 않도록 상태별 부제를 따로 둔다.
+  - 검증: iOS 쪽 서비스 타입을 임시로 어긋나게 만들어 실제 화면을 캡처해 확인한 뒤 원복했다.
 - [x] iOS 리모컨 앱 아이콘 (1.0.5)
   - `StickyPresenterRemote/Sources/Assets.xcassets/AppIcon.appiconset/icon_1024.png`
   - 생성기를 `StickyPresenterRemote/MakeIcon.swift` 로 함께 커밋했다 (`swift MakeIcon.swift out.png`).
