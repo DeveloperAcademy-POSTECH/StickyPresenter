@@ -1261,17 +1261,32 @@ struct TimerWidgetView: View {
         }
     }
 
-    /// 둥근 사각형에서 1/4 눈금이 놓이는 꼭짓점의 좌표.
-    /// 모서리 호의 한가운데(대각선 지점)라 각 변에서 `r × (1 − √2/2)` 만큼 안쪽이다.
-    /// `RoundedRectProgress` 가 좌상단 꼭짓점에서 출발하므로 1=우상단, 2=우하단, 3=좌하단이 된다.
-    private static func cornerPoint(_ quarter: Int, innerSide: CGFloat, radius: CGFloat) -> CGPoint {
+    /// 1/4 을 지나는 **그 순간 진행 선의 끝**이 놓이는 꼭짓점.
+    ///
+    /// 선은 `trim(from: 0, to: 1 - progress)` 라 끝점이 경로를 거슬러 물러난다.
+    /// 진행이 25% 면 끝점은 경로의 75% 지점에 있으므로, 점을 진행률과 같은 쪽
+    /// (1/4=우상단)에 찍으면 선 끝과 반대 방향으로 돌아 어긋나 보인다.
+    ///   진행 25% → 좌하단, 50% → 우하단, 75% → 우상단
+    ///
+    /// 꼭짓점은 모서리 호의 한가운데(대각선 지점)라 각 변에서 `r × (1 − √2/2)` 안쪽이다.
+    private static func vanishingPoint(quarter: Int, innerSide: CGFloat, radius: CGFloat) -> CGPoint {
         let r = min(radius, innerSide / 2)
         let d = r * (1 - CGFloat(2).squareRoot() / 2)
         switch quarter {
-        case 1:  return CGPoint(x: innerSide - d, y: d)              // 25% 우상단
-        case 2:  return CGPoint(x: innerSide - d, y: innerSide - d)  // 50% 우하단
-        default: return CGPoint(x: d, y: innerSide - d)              // 75% 좌하단
+        case 1:  return CGPoint(x: d, y: innerSide - d)              // 25% → 좌하단
+        case 2:  return CGPoint(x: innerSide - d, y: innerSide - d)  // 50% → 우하단
+        default: return CGPoint(x: innerSide - d, y: d)              // 75% → 우상단
         }
+    }
+
+    /// 1/4 점 색 — 회색 계열.
+    ///
+    /// 처음엔 앰버를 썼지만, 밝은 배경에서 대비를 맞추려고 명도를 낮추면 갈색이 된다.
+    /// 무채색은 그런 변질이 없다. 다만 진행 선(검정/흰색)과 구분돼야 하므로
+    /// 검정·흰색으로 튀지 않고 **중간 회색에 최대한 가까운** 값을 고른다.
+    private var quarterDotColor: Color {
+        if let chameleon { return chameleon.readableGray() }
+        return isDark ? Color(white: 0.78) : Color(white: 0.42)
     }
 
     // MARK: - Chameleon
@@ -1380,13 +1395,13 @@ struct TimerWidgetView: View {
             // 숫자를 읽지 않아도 "방금 4분의 1이 지났다"가 눈에 걸리게 하는 장치다.
             if let quarter = flashQuarter {
                 Circle()
-                    .fill(ringColor)
-                    .frame(width: max(7, 15 * scale), height: max(7, 15 * scale))
+                    .fill(quarterDotColor)
+                    .frame(width: max(8, 17 * scale), height: max(8, 17 * scale))
                     .scaleEffect(flashScale)
                     .opacity(flashOpacity)
-                    .position(Self.cornerPoint(quarter,
-                                               innerSide: max(1, side - inset * 2),
-                                               radius: radius))
+                    .position(Self.vanishingPoint(quarter: quarter,
+                                                  innerSide: max(1, side - inset * 2),
+                                                  radius: radius))
                     .allowsHitTesting(false)
             }
 

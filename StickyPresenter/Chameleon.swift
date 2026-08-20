@@ -66,6 +66,24 @@ struct ChameleonPalette {
         return Self.rgbColor(rgb)
     }
 
+    /// 이 배경 위에서 읽히는 **무채색** 하나. 대비 기준은 지키되
+    /// 검정·흰색으로 튀지 않도록 가능한 한 중간 회색에 가까운 값을 고른다.
+    func readableGray() -> Color {
+        var best: (level: CGFloat, distanceFromMid: CGFloat)?
+        for step in 0...40 {
+            let level = CGFloat(step) / 40
+            let lum = Self.relativeLuminance((level, level, level))
+            guard Self.contrast(backgroundLuminance, lum) >= Self.minimumContrast else { continue }
+            let distance = abs(level - 0.5)
+            if best == nil || distance < best!.distanceFromMid {
+                best = (level, distance)
+            }
+        }
+        // 어떤 회색도 기준을 못 넘기는 배경(중간 밝기)에서는 극단으로 간다.
+        let level = best?.level ?? (isDark ? 1 : 0)
+        return Color(.sRGB, red: level, green: level, blue: level)
+    }
+
     private static func rgbColor(_ c: RGB) -> Color {
         Color(.sRGB, red: c.r, green: c.g, blue: c.b)
     }
