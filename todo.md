@@ -5,6 +5,13 @@
 - [x] 타이머 시작/종료 시 앱 크래시 버그 분석 및 수정
 
 ## 배포 전 남은 일
+- ⚠️ **리모컨 앱은 iPhone 전용(`TARGETED_DEVICE_FAMILY: "1"`)으로 둘 것.**
+  iPad(`"1,2"`)까지 넣으면 App Store 가 멀티태스킹을 위해 네 방향을 모두 지원하라며 거절한다
+  ("you need to include all of the Portrait, PortraitUpsideDown, LandscapeLeft, LandscapeRight").
+  세로 고정 리모컨에는 맞지 않는 요구라 iPhone 전용으로 되돌렸다. iPad 에서는 호환 모드로 실행된다.
+  정식 iPad 지원을 하려면 네 방향을 모두 열고 가로 레이아웃을 확인해야 한다.
+- ⚠️ 리모컨 plist 의 버전은 `$(MARKETING_VERSION)` / `$(CURRENT_PROJECT_VERSION)` 참조를 쓴다.
+  값을 그대로 적으면 plist 가 이겨서 project.yml 의 버전 설정이 조용히 무시된다.
 - ⚠️ **빌드 번호는 절대 되돌리지 말 것** — `CFBundleVersion` 은 `MARKETING_VERSION` 과 무관하게
   앱 전체에서 단조 증가해야 한다. 1.0.5 를 빌드 1로 올렸다가 업로드가 거절됐다
   ("must contain a higher version than that of the previously uploaded version [6]").

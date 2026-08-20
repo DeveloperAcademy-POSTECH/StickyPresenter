@@ -24,19 +24,24 @@ targets:
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Remote Controller
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        # MultipeerConnectivity 는 iOS 14+ 에서 로컬 네트워크 권한과
-        # Bonjour 서비스 사전 선언이 없으면 상대를 아예 못 찾는다.
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: 같은 네트워크에 있는 Mac의 StickyPresenter를 찾아 타이머를 조작합니다.
+        CURRENT_PROJECT_VERSION: "2"
         SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "1,2"
+        # iPhone 전용(1). iPad(2)까지 넣으면 App Store 가 멀티태스킹을 위해
+        # 네 방향을 모두 지원하라고 요구해 업로드가 거절된다.
+        #   "you need to include all of the Portrait, PortraitUpsideDown,
+        #    LandscapeLeft, LandscapeRight orientations to support iPad multitasking"
+        # 이 앱은 한 손으로 쓰는 리모컨이라 세로 고정이 맞고, 화면 문구도 전부
+        # iPhone 기준이다. iPad 에서는 호환 모드로 그대로 설치·실행된다.
+        # iPad 를 정식 지원하려면 "1,2" 로 되돌리고 네 방향을 모두 열어야 한다.
+        TARGETED_DEVICE_FAMILY: "1"
     info:
       path: Sources/Info.plist
       properties:
+        CFBundleDisplayName: Remote Controller
+        # 값을 그대로 적으면 plist 쪽이 이겨서 위의 MARKETING_VERSION /
+        # CURRENT_PROJECT_VERSION 이 무시된다. 버전은 한 곳에서만 관리한다.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSBonjourServices:
           - _sp-timer._tcp
           - _sp-timer._udp
