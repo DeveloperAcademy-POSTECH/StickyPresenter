@@ -42,8 +42,10 @@
     - macOS entitlements: `network.client`, `network.server` 추가함
     - 양쪽 Info.plist: `NSBonjourServices` (`_sp-timer._tcp` / `._udp`), `NSLocalNetworkUsageDescription`
     - 서비스 타입 `sp-timer` 는 1~15자·소문자/숫자/하이픈 제약을 지킨 값
-  - [ ] 실기기 연결 테스트 미완료 — 시뮬레이터는 MultipeerConnectivity 동작이 제한적이라
-        iPhone 실기기로 확인 필요
+  - [x] **연결 확인 완료** — iOS 시뮬레이터 ↔ Mac 앱이 정상 동작한다(시뮬레이터가 호스트
+        네트워크를 공유하므로 MultipeerConnectivity 가 그대로 붙는다). 타이머 목록·남은 시간이
+        실시간으로 흐르고 명령도 반영된다. 앱 이름은 **Remote Controller**.
+  - [ ] iPhone 실기기 확인은 아직 — Wi-Fi 환경이 다르므로 발표 전 한 번은 실기기로 볼 것
   - [ ] 리모컨 앱 서명·번들ID(`com.leeo.StickyPresenter.Remote`) 배포 계획 미정
 - [x] 타이머 창 프리셋 크기 S/M/L (1.0.4)
   - `WidgetSize` (S 200 / M 300 / L 420pt). 타이머 행 3번째 줄에 세그먼트 버튼으로 배치

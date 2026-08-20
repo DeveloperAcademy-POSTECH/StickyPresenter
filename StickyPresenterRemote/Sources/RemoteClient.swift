@@ -29,6 +29,11 @@ final class RemoteClient: NSObject, ObservableObject {
     @Published private(set) var status: Status = .searching
     @Published private(set) var timers: [RemoteTimer] = []
 
+    var isConnected: Bool {
+        if case .connected = status { return true }
+        return false
+    }
+
     private let peerID = MCPeerID(displayName: String(UIDevice.current.name.prefix(30)))
     private var session: MCSession?
     private var browser: MCNearbyServiceBrowser?
