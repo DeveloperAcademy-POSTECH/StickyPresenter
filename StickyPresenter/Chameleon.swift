@@ -19,6 +19,8 @@ struct ChameleonPalette {
     let track: Color
     /// 배경이 어두운지 — 기존 테마 로직(그림자 등)과 맞추기 위해 노출한다.
     let isDark: Bool
+    /// 배경의 WCAG 상대휘도. `readable(_:)` 이 대비를 계산할 때 쓴다.
+    let backgroundLuminance: CGFloat
 
     /// 편하게 읽히는 목표 명암비. 가능하면 이만큼 확보한다.
     private static let preferredContrast: CGFloat = 4.5
@@ -36,11 +38,43 @@ struct ChameleonPalette {
 
         self.background = Color(nsColor: srgb)
         self.isDark = bgLum < 0.18   // WCAG 상대휘도 기준 (선형화 후 값이라 임계값이 낮다)
+        self.backgroundLuminance = bgLum
 
         let accentRGB = Self.accent(forHue: h, saturation: s, backgroundRGB: bgRGB, backgroundLum: bgLum)
         let accentColor = Color(.sRGB, red: accentRGB.r, green: accentRGB.g, blue: accentRGB.b)
         self.accent = accentColor
         self.track = accentColor.opacity(0.18)
+    }
+
+    /// 주어진 색을 이 배경 위에서 읽히도록 조정한다. **색상(hue)은 그대로 두고**
+    /// 채도·명도만 바꾼다.
+    ///
+    /// 뽀모도로의 집중(토마토)·휴식(민트)이나 완료 빨강처럼 **의미가 붙은 색**은
+    /// 보색으로 갈아치우면 뜻이 사라진다. 그렇다고 고정값을 그대로 쓰면 비슷한 색의
+    /// 배경 위에서 그대로 묻힌다. 색은 알아보되 대비는 확보되게 하는 절충이다.
+    func readable(_ color: NSColor) -> Color {
+        let srgb = color.usingColorSpace(.sRGB) ?? .gray
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        srgb.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+
+        // 원래 색이 무채색이면 조정할 색상이 없다.
+        guard s >= 0.12 else {
+            return Self.rgbColor(Self.monochrome(againstLuminance: backgroundLuminance))
+        }
+        let rgb = Self.bestColor(hue: h, backgroundLum: backgroundLuminance)
+            ?? Self.monochrome(againstLuminance: backgroundLuminance)
+        return Self.rgbColor(rgb)
+    }
+
+    private static func rgbColor(_ c: RGB) -> Color {
+        Color(.sRGB, red: c.r, green: c.g, blue: c.b)
+    }
+
+    /// 어떤 색으로도 기준을 못 넘길 때의 최후 수단.
+    private static func monochrome(againstLuminance bgLum: CGFloat) -> RGB {
+        let white: RGB = (1, 1, 1), black: RGB = (0, 0, 0)
+        return contrast(bgLum, relativeLuminance(white)) >= contrast(bgLum, relativeLuminance(black))
+            ? white : black
     }
 
     // MARK: 보색 선택
@@ -57,16 +91,19 @@ struct ChameleonPalette {
     // 무채색 배경(약 18%)은 애초에 색상값이 무의미하므로 흑백으로 간다.
     private static func accent(forHue h: CGFloat, saturation s: CGFloat,
                                backgroundRGB bgRGB: RGB, backgroundLum bgLum: CGFloat) -> RGB {
-        let white: RGB = (1, 1, 1), black: RGB = (0, 0, 0)
-        func best(of a: RGB, _ b: RGB) -> RGB {
-            contrast(bgLum, relativeLuminance(a)) >= contrast(bgLum, relativeLuminance(b)) ? a : b
-        }
-
         // 흰 문서·검은 배경처럼 채도가 없는 화면에서는 색상값이 사실상 난수다.
         // 여기서 색상환을 돌리면 배경과 무관한 임의의 색이 나오므로 명암 대비로 간다.
-        guard s >= 0.12 else { return best(of: white, black) }
+        guard s >= 0.12 else { return monochrome(againstLuminance: bgLum) }
 
         let complementHue = (h + 0.5).truncatingRemainder(dividingBy: 1.0)
+        return bestColor(hue: complementHue, backgroundLum: bgLum)
+            ?? monochrome(againstLuminance: bgLum)
+    }
+
+    /// 주어진 색상(hue)을 유지한 채 채도·명도를 훑어, 대비 기준을 넘는 것 중
+    /// 가장 선명한 색을 고른다. 어떤 조합도 기준을 못 넘기면 nil.
+    private static func bestColor(hue: CGFloat, backgroundLum bgLum: CGFloat) -> RGB? {
+        let complementHue = hue
 
         var vividPreferred: (sat: CGFloat, bri: CGFloat, rgb: RGB, contrast: CGFloat)?
         var vividMinimum:   (sat: CGFloat, bri: CGFloat, rgb: RGB, contrast: CGFloat)?
@@ -94,8 +131,7 @@ struct ChameleonPalette {
             }
         }
 
-        if let pick = vividPreferred ?? vividMinimum ?? anyReadable { return pick.rgb }
-        return best(of: white, black)
+        return (vividPreferred ?? vividMinimum ?? anyReadable)?.rgb
     }
 
     /// 더 선명한 쪽(채도 → 명도 순)을 우선하고, 같으면 목표 대비에 가까운 쪽을 고른다.

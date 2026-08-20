@@ -1076,6 +1076,13 @@ struct TimerWidgetView: View {
     // 카멜레온 모드용 — 이 뷰가 올라간 창과, 그 뒤 화면에서 읽어낸 팔레트
     @State private var hostWindow: NSWindow?
     @State private var sampledPalette: ChameleonPalette?
+    // 1/4 지점 통과 피드백 — 지금 반짝이는 꼭짓점(1=25%, 2=50%, 3=75%)과 그 애니메이션 상태
+    @State private var flashQuarter: Int?
+    @State private var flashScale: CGFloat = 1
+    @State private var flashOpacity: Double = 0
+    @State private var flashTask: Task<Void, Never>?
+    /// 마지막으로 지나간 1/4 구간. 되감기(초기화)로 줄어들 때는 반짝이지 않는다.
+    @State private var lastQuarter = 0
     @State private var pulseTask: Task<Void, Never>? = nil
     @Environment(\.colorScheme) private var systemScheme
 
@@ -1115,10 +1122,22 @@ struct TimerWidgetView: View {
     }
 
     private var ringColor: Color {
-        if entry.isFinished { return Color(red: 1, green: 0.22, blue: 0.37) }
+        if entry.isFinished { return adapted(Color(red: 1, green: 0.22, blue: 0.37)) }
         // 뽀모도로는 링 색으로 집중/휴식을 구분한다.
-        if entry.isPomodoro { return entry.phase.color }
+        if entry.isPomodoro { return phaseColor }
         return textColor.opacity(0.85)
+    }
+
+    /// 뽀모도로 구간 색. 카멜레온 모드에서는 대비가 확보된 값으로 바뀐다.
+    private var phaseColor: Color { adapted(entry.phase.color) }
+
+    /// 카멜레온 모드에서 **의미가 붙은 고정 색**(뽀모도로 구간색, 완료 빨강)을
+    /// 배경 위에서 읽히도록 조정한다. 색상은 그대로 두고 채도·명도만 바뀌므로
+    /// 집중이 붉은 계열, 휴식이 초록 계열이라는 구분은 유지된다.
+    /// 조정하지 않으면 비슷한 색의 화면 위에서 링이 통째로 묻힌다.
+    private func adapted(_ color: Color) -> Color {
+        guard let chameleon else { return color }
+        return chameleon.readable(NSColor(color))
     }
 
     var body: some View {
@@ -1184,14 +1203,75 @@ struct TimerWidgetView: View {
             withAnimation { isHovered = hovering }
         }
         .onChange(of: entry.isFinished) { finished in updatePulse(finished) }
-        .onAppear { updatePulse(entry.isFinished) }
-        .onDisappear { pulseTask?.cancel(); pulseTask = nil }
+        .onChange(of: entry.progress) { progress in handleQuarter(progress) }
+        .onAppear {
+            updatePulse(entry.isFinished)
+            // 이미 진행 중인 타이머를 다시 열었을 때 지나간 구간이 몰아서 반짝이지 않도록 맞춰둔다.
+            lastQuarter = Int(entry.progress * 4)
+        }
+        .onDisappear {
+            pulseTask?.cancel(); pulseTask = nil
+            flashTask?.cancel(); flashTask = nil
+        }
         // 샘플링하려면 창의 화면상 위치가 필요한데 SwiftUI만으로는 알 수 없다.
         .background(WindowReader { window in
             if hostWindow !== window { hostWindow = window }
         })
         // 카멜레온 모드일 때만 도는 폴링 루프. 테마가 바뀌면 .task(id:)가 알아서 재시작한다.
         .task(id: entry.theme) { await runChameleonLoop() }
+    }
+
+    // MARK: - 1/4 지점 통과 피드백
+
+    /// 진행률이 1/4 경계를 넘어설 때만 반짝인다.
+    private func handleQuarter(_ progress: Double) {
+        let quarter = Int(progress * 4)
+        // 초기화·되감기로 진행률이 줄면 조용히 기준만 되돌린다.
+        guard quarter > lastQuarter else {
+            if quarter < lastQuarter { lastQuarter = quarter }
+            return
+        }
+        lastQuarter = quarter
+        // 100%(=4)는 완료 펄스가 따로 알려주므로 여기서는 다루지 않는다.
+        guard (1...3).contains(quarter) else { return }
+        flash(quarter)
+    }
+
+    private func flash(_ quarter: Int) {
+        flashTask?.cancel()
+        flashQuarter = quarter
+        flashScale = 0.4
+        flashOpacity = 0
+
+        // 튀어나오고 → 잠깐 머물고 → 커지며 사라진다.
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.55)) {
+            flashScale = 1
+            flashOpacity = 1
+        }
+        flashTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 650_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.easeOut(duration: 0.75)) {
+                flashOpacity = 0
+                flashScale = 1.9
+            }
+            try? await Task.sleep(nanoseconds: 750_000_000)
+            if Task.isCancelled { return }
+            flashQuarter = nil
+        }
+    }
+
+    /// 둥근 사각형에서 1/4 눈금이 놓이는 꼭짓점의 좌표.
+    /// 모서리 호의 한가운데(대각선 지점)라 각 변에서 `r × (1 − √2/2)` 만큼 안쪽이다.
+    /// `RoundedRectProgress` 가 좌상단 꼭짓점에서 출발하므로 1=우상단, 2=우하단, 3=좌하단이 된다.
+    private static func cornerPoint(_ quarter: Int, innerSide: CGFloat, radius: CGFloat) -> CGPoint {
+        let r = min(radius, innerSide / 2)
+        let d = r * (1 - CGFloat(2).squareRoot() / 2)
+        switch quarter {
+        case 1:  return CGPoint(x: innerSide - d, y: d)              // 25% 우상단
+        case 2:  return CGPoint(x: innerSide - d, y: innerSide - d)  // 50% 우하단
+        default: return CGPoint(x: d, y: innerSide - d)              // 75% 좌하단
+        }
     }
 
     // MARK: - Chameleon
@@ -1296,6 +1376,20 @@ struct TimerWidgetView: View {
                 .stroke(ringColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
                 .animation(.linear(duration: 1), value: entry.progress)
 
+            // 1/4 지점을 지나는 순간 그 꼭짓점에서 점이 튀었다가 사라진다.
+            // 숫자를 읽지 않아도 "방금 4분의 1이 지났다"가 눈에 걸리게 하는 장치다.
+            if let quarter = flashQuarter {
+                Circle()
+                    .fill(ringColor)
+                    .frame(width: max(7, 15 * scale), height: max(7, 15 * scale))
+                    .scaleEffect(flashScale)
+                    .opacity(flashOpacity)
+                    .position(Self.cornerPoint(quarter,
+                                               innerSide: max(1, side - inset * 2),
+                                               radius: radius))
+                    .allowsHitTesting(false)
+            }
+
             VStack(spacing: 4) {
                 // 윤곽선으로 옮기면서 내부가 통째로 비었으므로 숫자를 크게 쓴다 (38 → 52).
                 // 창이 작아도 넘치지 않도록 한 줄 고정 + 축소 허용.
@@ -1317,7 +1411,7 @@ struct TimerWidgetView: View {
                         Text("\(entry.phase.title) · #\(entry.cycleNumber)")
                             .font(.system(size: max(9, 12 * scale), weight: .semibold))
                     }
-                    .foregroundStyle(entry.phase.color)
+                    .foregroundStyle(phaseColor)
                     .lineLimit(1)
                 } else if !entry.isRunning && !entry.name.isEmpty {
                     Text(entry.name)
