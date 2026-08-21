@@ -19,6 +19,100 @@ enum WidgetSize: String, CaseIterable {
     }
 }
 
+// MARK: - Quick Presets
+/// 빠른 시작 프리셋 한 칸. 새 타이머를 만들 때도, 끝난 타이머를 다른 시간으로 다시 쓸 때도
+/// 같은 목록을 쓴다 — 세 군데에 흩어져 있던 값을 여기 하나로 모았다.
+///
+/// `raw` 는 **사용자가 적은 원문 그대로**다("5:30", "1h 20m", "10").
+/// 편집 중에는 해석되지 않는 값도 잠깐 들어올 수 있으므로, 지우지 않고 그대로 들고 있다가
+/// 실제로 버튼을 그릴 때만 `isValid` 로 걸러낸다. 그래야 타이핑 도중 칸이 사라지지 않는다.
+struct TimerPreset: Identifiable, Equatable {
+    let id: UUID
+    let raw: String
+    let seconds: TimeInterval
+
+    init(id: UUID = UUID(), raw: String) {
+        self.id = id
+        self.raw = raw
+        // 입력창과 완전히 같은 파서를 쓴다 — 프리셋만 다른 문법을 배우게 하지 않는다.
+        self.seconds = parseTimerInput(raw)
+    }
+
+    var isValid: Bool { seconds > 0 }
+    /// 버튼에 찍히는 짧은 이름 (3m · 1:30 · 1h 20m …)
+    var label: String { shortTimeLabel(seconds) }
+}
+
+/// 프리셋 버튼·뽀모도로 라벨에 쓰는 짧은 시간 표기.
+func shortTimeLabel(_ t: TimeInterval) -> String {
+    let total = Int(t.rounded())
+    if total >= 3600 {
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        if m == 0 && s == 0 { return "\(h)h" }
+        if s == 0 { return "\(h)h \(m)m" }
+        return String(format: "%d:%02d:%02d", h, m, s)
+    }
+    if total > 0 && total % 60 == 0 { return "\(total / 60)m" }
+    return total >= 60 ? String(format: "%d:%02d", total / 60, total % 60) : "\(total)s"
+}
+
+// MARK: - Quick Preset Store
+/// 프리셋 목록의 단일 출처. 값은 UserDefaults 에 **원문 배열**로 저장한다 —
+/// 초로 환산해 저장하면 "1h 20m" 이라고 적은 걸 다시 열었을 때 "80m" 으로 바뀌어 보인다.
+final class TimerPresetStore: ObservableObject {
+    static let shared = TimerPresetStore()
+
+    /// 버튼이 가로로 균등 분배되므로 6개까지가 읽히는 한계다.
+    static let maxCount = 6
+    /// 최소 1개 — 프리셋 줄 자체가 사라지면 다시 만들 방법이 없어진다.
+    static let minCount = 1
+    static let defaults = ["3m", "5m", "10m", "15m"]
+
+    /// 편집 원문까지 그대로 담는 목록 (빈 칸·오타 포함). 편집 화면이 보는 값.
+    @Published private(set) var items: [TimerPreset] = []
+
+    /// 실제로 버튼으로 나가는 프리셋 — 해석되지 않는 칸은 뺀다.
+    var usable: [TimerPreset] { items.filter(\.isValid) }
+
+    var canAdd: Bool { items.count < Self.maxCount }
+    var canRemove: Bool { items.count > Self.minCount }
+
+    private enum Keys { static let raws = "timer.quickPresets" }
+
+    private init() {
+        let saved = UserDefaults.standard.stringArray(forKey: Keys.raws) ?? []
+        let raws = saved.isEmpty ? Self.defaults : Array(saved.prefix(Self.maxCount))
+        items = raws.map { TimerPreset(raw: $0) }
+    }
+
+    func setRaw(_ raw: String, for id: UUID) {
+        guard let i = items.firstIndex(where: { $0.id == id }), items[i].raw != raw else { return }
+        items[i] = TimerPreset(id: id, raw: raw)
+        save()
+    }
+
+    func add() {
+        guard canAdd else { return }
+        items.append(TimerPreset(raw: ""))
+        save()
+    }
+
+    func remove(_ id: UUID) {
+        guard canRemove else { return }
+        items.removeAll { $0.id == id }
+        save()
+    }
+
+    func restoreDefaults() {
+        items = Self.defaults.map { TimerPreset(raw: $0) }
+        save()
+    }
+
+    private func save() {
+        UserDefaults.standard.set(items.map(\.raw), forKey: Keys.raws)
+    }
+}
+
 // MARK: - Widget Theme
 enum WidgetTheme: String, CaseIterable {
     case system     // 시스템 외형 따름
@@ -183,6 +277,21 @@ class TimerEntry: ObservableObject, Identifiable {
         guard !isInvalidated else { return }
         targetSeconds += 60
         WidgetSync.refresh()
+    }
+
+    /// 이미 끝난(혹은 쓰고 있던) 타이머를 **다른 시간으로 다시 쓴다**.
+    /// 새 타이머를 만들지 않고 이 타이머의 목표 시간만 갈아끼우고 즉시 시작한다 —
+    /// 창 위치·크기·테마를 그대로 둔 채 시간만 바꾸고 싶을 때가 대부분이기 때문.
+    func restart(seconds: TimeInterval, name newName: String? = nil) {
+        guard !isInvalidated else { return }
+        stopTicker()
+        isRunning = false
+        // 프리셋으로 다시 쓰면 한 번 울리고 끝나는 일반 타이머가 된다.
+        pomodoro = nil
+        elapsed = 0
+        targetSeconds = max(1, seconds)
+        if let newName { name = newName }
+        setRunning(true)   // 내부에서 WidgetSync·MusicPlayer 동기화까지 처리
     }
 
     func reset() {
@@ -375,6 +484,7 @@ func parsePomodoroInput(_ raw: String) -> PomodoroConfig? {
 // MARK: - Timer List View (main panel)
 struct TimerListView: View {
     @ObservedObject var manager: TimerListManager
+    @ObservedObject private var presetStore = TimerPresetStore.shared
     @State private var inputText = ""
     @FocusState private var focused: Bool
 
@@ -466,52 +576,43 @@ struct TimerListView: View {
             .padding(.top, 14)
             .padding(.bottom, 8)
 
-            // 프리셋 버튼
-            VStack(alignment: .leading, spacing: 6) {
+            // Quick Start 프리셋 — **타이머가 하나도 없을 때만** 보인다.
+            // 타이머가 생긴 뒤에는 새 타이머는 아래 "Add Timer" 행이,
+            // 끝난 타이머를 다른 시간으로 다시 쓰는 건 각 행 안의 프리셋이 맡는다.
+            VStack(spacing: 0) {
                 if manager.entries.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hand.tap")
-                            .font(.system(size: 10, weight: .medium))
-                        Text("Quick Start")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.accentColor.opacity(0.8))
-                    .padding(.leading, 2)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
-                HStack(spacing: 8) {
-                    ForEach([("3m", 180.0), ("5m", 300.0), ("10m", 600.0), ("15m", 900.0)], id: \.0) { label, secs in
-                        Button(action: {
-                            let entry = TimerEntry(name: label, targetSeconds: secs)
-                            entry.setRunning(true)
-                            manager.add(entry)
-                        }) {
-                            Text(label)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(manager.entries.isEmpty ? Color.accentColor : .secondary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 7)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(manager.entries.isEmpty
-                                              ? Color.accentColor.opacity(0.12)
-                                              : Color.primary.opacity(0.06))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .strokeBorder(manager.entries.isEmpty
-                                                              ? Color.accentColor.opacity(0.3)
-                                                              : Color.clear, lineWidth: 1)
-                                        )
-                                )
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hand.tap")
+                                .font(.system(size: 10, weight: .medium))
+                            Text("Quick Start")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.accentColor.opacity(0.8))
+                            Spacer()
+                            PresetEditButton()
                         }
-                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.accentColor.opacity(0.8))
+                        .padding(.leading, 2)
+
+                        HStack(spacing: 8) {
+                            ForEach(presetStore.usable) { preset in
+                                Button(action: {
+                                    let entry = TimerEntry(name: preset.label, targetSeconds: preset.seconds)
+                                    entry.setRunning(true)
+                                    manager.add(entry)
+                                }) {
+                                    Text(preset.label).modifier(PresetButtonStyle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: manager.entries.isEmpty)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 10)
 
             // Timer list
             if manager.entries.isEmpty {
@@ -539,7 +640,7 @@ struct TimerListView: View {
                         }
 
                         // 타이머 추가 행
-                        AddTimerRow(presets: [("3m", 180.0), ("5m", 300.0), ("10m", 600.0), ("15m", 900.0)]) { secs, label in
+                        AddTimerRow { secs, label in
                             let entry = TimerEntry(name: label, targetSeconds: secs)
                             entry.setRunning(true)
                             manager.add(entry)
@@ -607,6 +708,8 @@ struct TimerRowView: View {
     @ObservedObject var entry: TimerEntry
     let onRemove: () -> Void
 
+    @ObservedObject private var presetStore = TimerPresetStore.shared
+
     private var timeColor: Color {
         if entry.isFinished { return Color(red: 1, green: 0.22, blue: 0.37) }
         // 뽀모도로는 남은 시간 색으로 지금이 집중인지 휴식인지 알려준다.
@@ -615,115 +718,125 @@ struct TimerRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                if entry.isPomodoro {
-                    pomodoroLabel
-                } else {
-                    Text(entry.name)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 1) {
+                    if entry.isPomodoro {
+                        pomodoroLabel
+                    } else {
+                        Text(entry.name)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Text(formatTime(entry.remaining))
+                        .font(.system(size: 30, weight: .bold, design: .monospaced))
+                        .foregroundStyle(timeColor)
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
+                        .animation(.linear(duration: 0.3), value: entry.remaining)
                 }
 
-                Text(formatTime(entry.remaining))
-                    .font(.system(size: 30, weight: .bold, design: .monospaced))
-                    .foregroundStyle(timeColor)
-                    .monospacedDigit()
-                    .contentTransition(.numericText(countsDown: true))
-                    .animation(.linear(duration: 0.3), value: entry.remaining)
+                // 모든 컨트롤 버튼을 3m/5m 프리셋과 동일한 디자인(둥근 사각형 cornerRadius 8)으로 통일
+                VStack(spacing: 6) {
+                    // 1행 — 시간 조절: 일시정지를 가운데 두고 좌우에 -30s / +30s
+                    HStack(spacing: 6) {
+                        Button(action: { entry.subtractSeconds() }) {
+                            Text("−30s").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: {
+                            if entry.isFinished { entry.reset() }
+                            entry.toggleRunning()
+                        }) {
+                            Image(systemName: entry.isRunning ? "pause.fill" : "play.fill")
+                                .modifier(CtrlButtonStyle(fg: .primary, bg: Color.primary.opacity(0.06)))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: { entry.addSeconds() }) {
+                            Text("+30s").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // 2행 — 위젯 제어: 감추기/표시 · 불러오기 · 윈도우
+                    HStack(spacing: 6) {
+                        // 위젯 표시/감추기 토글 (눈동자 통합)
+                        Button(action: toggleWidgetVisibility) {
+                            Text(entry.isWidgetHidden ? "Show" : "Hide")
+                                .modifier(CtrlButtonStyle(
+                                    fg: entry.isWidgetHidden ? .secondary : Color.accentColor,
+                                    bg: entry.isWidgetHidden ? Color.primary.opacity(0.06) : Color.accentColor.opacity(0.12)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Show / hide widget")
+
+                        // 불러오기: 위젯을 패널 옆으로 정렬해 앞으로 (화면 밖으로 사라졌을 때 되찾기)
+                        Button(action: { NoteManager.shared.snapWidgetToPanel(for: entry) }) {
+                            Text("Align").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Align widget next to the panel")
+
+                        // 윈도우: 이 타이머를 별도 윈도우로 열기 (화면 공유 / AirPlay)
+                        Button(action: { NoteManager.shared.openTimerWindow(for: entry) }) {
+                            Text("Window").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in a window (screen share / AirPlay)")
+                    }
+
+                    // 3행 — 테마 · (빈칸) · 삭제
+                    HStack(spacing: 6) {
+                        // 테마 전환 (시스템 → 라이트 → 다크 순환)
+                        Button(action: { entry.theme = entry.theme.next }) {
+                            Image(systemName: entry.theme.icon)
+                                .modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Theme: \(entry.theme.rawValue)")
+
+                        // 프리셋 크기 S / M / L
+                        HStack(spacing: 3) {
+                            ForEach(WidgetSize.allCases, id: \.self) { size in
+                                let isCurrent = entry.widgetSize == size
+                                Button(action: { NoteManager.shared.setWidgetSize(size, for: entry) }) {
+                                    Text(size.rawValue)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(isCurrent ? Color.accentColor : .secondary)
+                                        .frame(width: 26, height: 30)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(isCurrent ? Color.accentColor.opacity(0.12)
+                                                                : Color.primary.opacity(0.06))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .help("Widget size: \(size.rawValue) (\(Int(size.side))pt)")
+                            }
+                        }
+
+                        Button(action: onRemove) {
+                            Image(systemName: "xmark")
+                                .modifier(CtrlButtonStyle(fg: .white, bg: Color(red: 1, green: 0.27, blue: 0.23)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete timer")
+                    }
+                }
             }
 
-            // 모든 컨트롤 버튼을 3m/5m 프리셋과 동일한 디자인(둥근 사각형 cornerRadius 8)으로 통일
-            VStack(spacing: 6) {
-                // 1행 — 시간 조절: 일시정지를 가운데 두고 좌우에 -30s / +30s
-                HStack(spacing: 6) {
-                    Button(action: { entry.subtractSeconds() }) {
-                        Text("−30s").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: {
-                        if entry.isFinished { entry.reset() }
-                        entry.toggleRunning()
-                    }) {
-                        Image(systemName: entry.isRunning ? "pause.fill" : "play.fill")
-                            .modifier(CtrlButtonStyle(fg: .primary, bg: Color.primary.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: { entry.addSeconds() }) {
-                        Text("+30s").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                // 2행 — 위젯 제어: 감추기/표시 · 불러오기 · 윈도우
-                HStack(spacing: 6) {
-                    // 위젯 표시/감추기 토글 (눈동자 통합)
-                    Button(action: toggleWidgetVisibility) {
-                        Text(entry.isWidgetHidden ? "Show" : "Hide")
-                            .modifier(CtrlButtonStyle(
-                                fg: entry.isWidgetHidden ? .secondary : Color.accentColor,
-                                bg: entry.isWidgetHidden ? Color.primary.opacity(0.06) : Color.accentColor.opacity(0.12)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Show / hide widget")
-
-                    // 불러오기: 위젯을 패널 옆으로 정렬해 앞으로 (화면 밖으로 사라졌을 때 되찾기)
-                    Button(action: { NoteManager.shared.snapWidgetToPanel(for: entry) }) {
-                        Text("Align").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Align widget next to the panel")
-
-                    // 윈도우: 이 타이머를 별도 윈도우로 열기 (화면 공유 / AirPlay)
-                    Button(action: { NoteManager.shared.openTimerWindow(for: entry) }) {
-                        Text("Window").modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Open in a window (screen share / AirPlay)")
-                }
-
-                // 3행 — 테마 · (빈칸) · 삭제
-                HStack(spacing: 6) {
-                    // 테마 전환 (시스템 → 라이트 → 다크 순환)
-                    Button(action: { entry.theme = entry.theme.next }) {
-                        Image(systemName: entry.theme.icon)
-                            .modifier(CtrlButtonStyle(fg: .secondary, bg: Color.primary.opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Theme: \(entry.theme.rawValue)")
-
-                    // 프리셋 크기 S / M / L
-                    HStack(spacing: 3) {
-                        ForEach(WidgetSize.allCases, id: \.self) { size in
-                            let isCurrent = entry.widgetSize == size
-                            Button(action: { NoteManager.shared.setWidgetSize(size, for: entry) }) {
-                                Text(size.rawValue)
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(isCurrent ? Color.accentColor : .secondary)
-                                    .frame(width: 26, height: 30)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(isCurrent ? Color.accentColor.opacity(0.12)
-                                                            : Color.primary.opacity(0.06))
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                            .help("Widget size: \(size.rawValue) (\(Int(size.side))pt)")
-                        }
-                    }
-
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark")
-                            .modifier(CtrlButtonStyle(fg: .white, bg: Color(red: 1, green: 0.27, blue: 0.23)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Delete timer")
-                }
+            // 끝난 타이머를 **다른 시간으로 다시 쓰는** 프리셋.
+            // 완료 상태에서만 나타난다 — 실행 중에는 행 높이를 그대로 두는 편이 읽기 좋고,
+            // 시간을 갈아끼우고 싶어지는 순간은 결국 다 끝났을 때이기 때문.
+            if entry.isFinished {
+                reusePresetRow
             }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: entry.isFinished)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(rowBackground)
@@ -736,6 +849,27 @@ struct TimerRowView: View {
                 else { entry.widgetPanel?.orderOut(nil) }
             }
         }
+    }
+
+    // 완료된 타이머를 이 자리에서 다른 시간으로 다시 시작하는 줄.
+    // 누르면 새 타이머를 만들지 않고 **이 타이머**의 시간만 바꿔 곧바로 시작한다 —
+    // 창 위치·크기·테마가 그대로 유지된다. 같은 시간으로 다시 돌리려면 ▶ 를 누르면 된다.
+    private var reusePresetRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.accentColor.opacity(0.8))
+                .help("Reuse this timer with another duration")
+
+            ForEach(presetStore.usable) { preset in
+                Button(action: { entry.restart(seconds: preset.seconds, name: preset.label) }) {
+                    Text(preset.label).modifier(PresetButtonStyle())
+                }
+                .buttonStyle(.plain)
+                .help("Restart this timer as \(preset.label)")
+            }
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // 뽀모도로 행 머리말 — 구간 배지 + 설정값 + 몇 번째 사이클인지
@@ -984,6 +1118,148 @@ final class ResizeHandleNSView: NSView {
     }
 }
 
+// MARK: - Quick Preset Editor
+/// 프리셋 줄 옆 ✏︎ 버튼. 팝오버를 띄우는 일만 한다.
+struct PresetEditButton: View {
+    @State private var isEditing = false
+
+    var body: some View {
+        Button(action: { isEditing = true }) {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.accentColor.opacity(0.8))
+                .frame(width: 22, height: 20)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.10)))
+        }
+        .buttonStyle(.plain)
+        .help("Edit quick presets")
+        .popover(isPresented: $isEditing, arrowEdge: .bottom) {
+            PresetEditorView()
+        }
+    }
+}
+
+/// 프리셋 목록 편집기. 값을 고치는 즉시 저장·반영된다 —
+/// "확인" 버튼을 두면 팝오버를 그냥 닫았을 때 방금 친 값이 날아간다.
+struct PresetEditorView: View {
+    @ObservedObject private var store = TimerPresetStore.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.tap")
+                    .font(.system(size: 10, weight: .medium))
+                Text("Quick Presets")
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Button(action: { store.restoreDefaults() }) {
+                    Text("Reset")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Restore \(TimerPresetStore.defaults.joined(separator: " / "))")
+            }
+            .foregroundStyle(Color.accentColor.opacity(0.8))
+
+            Text("Same format as the input field —  5:30 · 1h 20m · 45s · 10")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 6) {
+                ForEach(store.items) { item in
+                    presetRow(item)
+                }
+            }
+
+            Button(action: { withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { store.add() } }) {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 9, weight: .bold))
+                    Text("Add preset")
+                        .font(.system(size: 11, weight: .medium))
+                    Spacer()
+                }
+                .foregroundStyle(store.canAdd ? Color.accentColor : Color.secondary.opacity(0.5))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(Color.accentColor.opacity(store.canAdd ? 0.08 : 0.03))
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(!store.canAdd)
+            .help(store.canAdd ? "Add a preset" : "Up to \(TimerPresetStore.maxCount) presets")
+
+            if store.usable.isEmpty {
+                Label("No readable preset — buttons stay hidden", systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color(red: 0.95, green: 0.6, blue: 0.1))
+            }
+        }
+        .padding(14)
+        .frame(width: 250)
+    }
+
+    @ViewBuilder
+    private func presetRow(_ item: TimerPreset) -> some View {
+        HStack(spacing: 8) {
+            TextField("5m", text: binding(for: item))
+                .textFieldStyle(.plain)
+                .font(.system(size: 12, design: .monospaced))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.06)))
+
+            // 어떻게 읽혔는지 그 자리에서 보여준다 — 오타를 저장 후에 발견하지 않도록.
+            Text(item.isValid ? item.label : "—")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(item.isValid ? Color.accentColor : Color.secondary.opacity(0.5))
+                .frame(minWidth: 44, alignment: .leading)
+                .lineLimit(1)
+
+            Button(action: { withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { store.remove(item.id) } }) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(store.canRemove ? Color(red: 1, green: 0.27, blue: 0.23) : Color.secondary.opacity(0.3))
+            }
+            .buttonStyle(.plain)
+            .disabled(!store.canRemove)
+            .help(store.canRemove ? "Remove preset" : "Keep at least one preset")
+        }
+    }
+
+    /// id 로 찾아 쓰는 바인딩. 인덱스로 묶으면 편집 중 한 칸을 지웠을 때
+    /// 남은 TextField 들이 엉뚱한 칸을 가리킨다.
+    private func binding(for item: TimerPreset) -> Binding<String> {
+        Binding(
+            get: { TimerPresetStore.shared.items.first { $0.id == item.id }?.raw ?? "" },
+            set: { TimerPresetStore.shared.setRaw($0, for: item.id) }
+        )
+    }
+}
+
+// MARK: - 프리셋 버튼 공통 스타일 (Quick Start · Add Timer · 행 안의 다시 쓰기 모두 동일)
+struct PresetButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Color.accentColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.accentColor.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
+                    )
+            )
+    }
+}
+
 // MARK: - 컨트롤 버튼 공통 스타일 (3m/5m 프리셋과 동일: 둥근 사각형 cornerRadius 8)
 struct CtrlButtonStyle: ViewModifier {
     var fg: Color
@@ -1002,9 +1278,9 @@ struct CtrlButtonStyle: ViewModifier {
 
 // MARK: - Add Timer Row (inline quick-add inside list)
 struct AddTimerRow: View {
-    let presets: [(String, Double)]
-    let onAdd: (Double, String) -> Void
+    let onAdd: (TimeInterval, String) -> Void
 
+    @ObservedObject private var presetStore = TimerPresetStore.shared
     @State private var isExpanded = false
 
     var body: some View {
@@ -1038,27 +1314,16 @@ struct AddTimerRow: View {
             // 펼쳐지면 프리셋 버튼 표시
             if isExpanded {
                 HStack(spacing: 8) {
-                    ForEach(presets, id: \.0) { label, secs in
+                    ForEach(presetStore.usable) { preset in
                         Button(action: {
-                            onAdd(secs, label)
+                            onAdd(preset.seconds, preset.label)
                             withAnimation { isExpanded = false }
                         }) {
-                            Text(label)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.accentColor)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 7)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.accentColor.opacity(0.10))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .strokeBorder(Color.accentColor.opacity(0.25), lineWidth: 1)
-                                        )
-                                )
+                            Text(preset.label).modifier(PresetButtonStyle())
                         }
                         .buttonStyle(.plain)
                     }
+                    PresetEditButton()
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
