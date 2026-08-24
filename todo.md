@@ -15,7 +15,7 @@
 - ⚠️ **빌드 번호는 절대 되돌리지 말 것** — `CFBundleVersion` 은 `MARKETING_VERSION` 과 무관하게
   앱 전체에서 단조 증가해야 한다. 1.0.5 를 빌드 1로 올렸다가 업로드가 거절됐다
   ("must contain a higher version than that of the previously uploaded version [6]").
-  1.0.4 가 6 이었으므로 1.0.5 는 **7**. 다음 업로드는 8 이상.
+  1.0.4 가 6 이었으므로 1.0.5 는 **7**, 1.0.6 은 **8**. 다음 업로드는 9 이상.
   올릴 때는 `StickyPresenter/Info.plist` 와 `project.yml`(WidgetExtension) 두 곳을 함께.
 - [ ] `v1.0.4` 태그 생성 (버전 상향·릴리즈 노트는 완료)
 - [ ] 실제 앱에서 손으로 확인 (계산은 격리 하네스로 검증함)

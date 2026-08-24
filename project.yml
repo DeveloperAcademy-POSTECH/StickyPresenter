@@ -69,8 +69,8 @@ targets:
         # 앱 전체에서 단조 증가해야 한다. 새 버전이라고 1로 되돌리면 업로드가 거절된다.
         #   "must contain a higher version than that of the previously uploaded version"
         # 1.0.4 가 빌드 6 이었으므로 1.0.5 는 7 부터 시작한다.
-        MARKETING_VERSION: "1.0.5"
-        CURRENT_PROJECT_VERSION: "7"
+        MARKETING_VERSION: "1.0.6"
+        CURRENT_PROJECT_VERSION: "8"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         INFOPLIST_FILE: Widget/Info.plist
