@@ -23,8 +23,11 @@ targets:
         DEVELOPMENT_TEAM: QGAQ3AY3R3
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "2"
+        # Mac 앱과 같은 버전으로 맞춘다 — 둘이 한 릴리즈로 함께 움직이고,
+        # 리모컨 기능은 양쪽이 같은 버전이어야 맞물린다 (위치 옮기기가 그 예).
+        # 빌드 번호는 이 앱 안에서만 단조 증가하면 된다 (1.0 이 2 였으므로 3).
+        MARKETING_VERSION: "1.0.7"
+        CURRENT_PROJECT_VERSION: "3"
         SWIFT_VERSION: "5.0"
         # iPhone 전용(1). iPad(2)까지 넣으면 App Store 가 멀티태스킹을 위해
         # 네 방향을 모두 지원하라고 요구해 업로드가 거절된다.
