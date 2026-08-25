@@ -9,6 +9,8 @@ Lucid Notes에서 영감을 받아, Keynote 프레젠테이션 중에도 메모�
 - 🏠 [Home](https://developeracademy-postech.github.io/StickyPresenter/)
 - 🛟 [Support](https://developeracademy-postech.github.io/StickyPresenter/support.html)
 - 🔒 [Privacy Policy](https://developeracademy-postech.github.io/StickyPresenter/privacy.html)
+- 📱 [Remote Controller (iPhone)](https://developeracademy-postech.github.io/StickyPresenter/remote.html)
+- 🔒 [Remote Controller Privacy Policy](https://developeracademy-postech.github.io/StickyPresenter/remote-privacy.html)
 
 ## ✨ Features
 

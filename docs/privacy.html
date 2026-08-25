@@ -11,7 +11,7 @@
   <header>
     <img class="icon" src="icon.png" alt="StickyPresenter app icon" />
     <h1>Privacy Policy</h1>
-    <p>Last updated: June 9, 2026</p>
+    <p>Last updated: August 25, 2026</p>
   </header>
 
   <main>
@@ -21,8 +21,9 @@
         <p class="lang">English</p>
         <h2>Summary</h2>
         <p><strong>StickyPresenter does not collect, store, transmit, or share any personal
-        data.</strong> It is a fully on-device macOS app with no accounts, no analytics, and
-        no network connections.</p>
+        data.</strong> It is an on-device macOS app with no accounts and no analytics. It makes
+        no internet requests; its only networking is a direct link to the
+        <a href="remote.html">Remote Controller</a> app on your own local network.</p>
 
         <h3>Data We Collect</h3>
         <p>None. The app does not gather personal information, usage analytics, identifiers,
@@ -37,8 +38,20 @@
         clipboard solely to place that text into a note or script on your device. Clipboard
         contents are not stored, logged, or transmitted.</p>
 
-        <h3>Network</h3>
-        <p>The app makes no network requests and contains no advertising or third-party SDKs.</p>
+        <h3>Local Network</h3>
+        <p>So that the <a href="remote.html">Remote Controller</a> iPhone app can find it,
+        StickyPresenter advertises a timer service (<code>_sp-timer</code>) on your local network
+        using Apple's MultipeerConnectivity, and macOS may ask you to allow Local Network access.
+        A connected iPhone exchanges only timer information (name, remaining time, state, widget
+        size, theme, and the widget's position on your screens) and the commands you tap; the
+        connection is encrypted and direct between the two devices. Your notes and teleprompter
+        scripts are never sent. Any device on the same network running the Remote Controller app
+        can connect and control the timers — there is no pairing code — so on an untrusted
+        network, quit StickyPresenter to stop being discoverable. See the
+        <a href="remote-privacy.html">Remote Controller privacy policy</a> for details.</p>
+
+        <h3>Internet</h3>
+        <p>The app makes no internet requests and contains no advertising or third-party SDKs.</p>
 
         <h3>Children</h3>
         <p>The app does not knowingly collect any information from anyone, including children.</p>
@@ -56,7 +69,9 @@
         <p class="lang">한국어</p>
         <h2>요약</h2>
         <p><strong>StickyPresenter는 어떠한 개인정보도 수집·저장·전송·공유하지 않습니다.</strong>
-        계정, 분석 도구, 네트워크 연결이 전혀 없는 완전한 온디바이스 macOS 앱입니다.</p>
+        계정과 분석 도구가 없는 온디바이스 macOS 앱입니다. 인터넷 요청은 하지 않으며, 유일한
+        네트워크 통신은 사용자의 로컬 네트워크에서 <a href="remote.html">Remote Controller</a>
+        앱과 직접 연결하는 것뿐입니다.</p>
 
         <h3>수집하는 데이터</h3>
         <p>없음. 개인정보, 사용 분석, 식별자, 텔레메트리를 일절 수집하지 않습니다.</p>
@@ -69,8 +84,19 @@
         <p>"클립보드에서 만들기" 또는 텔레프롬프터에 붙여넣기를 사용할 때, 해당 텍스트를 기기 내
         노트/대본에 넣기 위해서만 클립보드를 읽습니다. 클립보드 내용은 저장·기록·전송되지 않습니다.</p>
 
-        <h3>네트워크</h3>
-        <p>앱은 어떤 네트워크 요청도 하지 않으며, 광고나 제3자 SDK를 포함하지 않습니다.</p>
+        <h3>로컬 네트워크</h3>
+        <p><a href="remote.html">Remote Controller</a> iPhone 앱이 찾을 수 있도록, StickyPresenter는
+        Apple의 MultipeerConnectivity로 로컬 네트워크에 타이머 서비스(<code>_sp-timer</code>)를
+        광고합니다. macOS가 로컬 네트워크 접근 허용을 물을 수 있습니다. 연결된 iPhone과는 타이머
+        정보(이름, 남은 시간, 상태, 위젯 크기, 테마, 화면상의 위젯 위치)와 사용자가 누른 명령만
+        주고받으며, 연결은 두 기기 사이의 직접 연결이고 암호화됩니다. 노트와 텔레프롬프터 대본은
+        전송되지 않습니다. 페어링 코드가 없으므로 같은 네트워크에서 Remote Controller를 실행한
+        기기는 연결해 타이머를 조작할 수 있습니다 — 신뢰할 수 없는 네트워크에서는
+        StickyPresenter를 종료하면 검색되지 않습니다. 자세한 내용은
+        <a href="remote-privacy.html">Remote Controller 개인정보 처리방침</a>을 참고하세요.</p>
+
+        <h3>인터넷</h3>
+        <p>앱은 어떤 인터넷 요청도 하지 않으며, 광고나 제3자 SDK를 포함하지 않습니다.</p>
 
         <h3>아동</h3>
         <p>아동을 포함해 누구로부터도 정보를 수집하지 않습니다.</p>
@@ -87,7 +113,7 @@
   </main>
 
   <footer>
-    © 2026 StickyPresenter · <a href="support.html">Support</a>
+    © 2026 StickyPresenter · <a href="support.html">Support</a> · <a href="remote-privacy.html">Remote Controller Privacy</a>
   </footer>
 </body>
 </html>
