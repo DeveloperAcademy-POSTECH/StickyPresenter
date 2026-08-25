@@ -45,14 +45,7 @@ struct RemoteRootView: View {
         if !client.isConnected {
             DisconnectedView()
         } else if client.timers.isEmpty {
-            ContentUnavailableView {
-                Label("실행 중인 타이머 없음", systemImage: "timer")
-            } description: {
-                Text("아래에서 시간을 골라 시작하세요")
-            } actions: {
-                PresetRow().environmentObject(client)
-                    .padding(.horizontal, 32)
-            }
+            EmptyTimersView()
         } else {
             List {
                 ForEach(client.timers) { timer in
@@ -82,6 +75,48 @@ struct RemoteRootView: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: 110, alignment: .trailing)
             }
+        }
+    }
+}
+
+// MARK: - Empty
+
+/// 연결은 됐는데 타이머가 하나도 없을 때.
+///
+/// `ContentUnavailableView` 의 `actions` 슬롯을 쓰다 걷어냈다. 그 슬롯은 폭을 좁게 잡아
+/// (402pt 화면에서 230pt 남짓) 프리셋 4개를 넣으면 글자 크기를 조금만 키워도
+/// "10분" 이 "1…" 로 잘린다. 버튼이 화면 폭을 다 쓰게 하려면 직접 짜는 수밖에 없다.
+/// 생김새는 `DisconnectedView` 의 머리말과 같은 방식이라 둘이 따로 놀지 않는다.
+struct EmptyTimersView: View {
+    var body: some View {
+        // 글자를 크게 쓰면 프리셋이 한 열로 내려가면서 화면보다 길어진다.
+        // 화면 높이만큼을 최소 높이로 준 뒤 스크롤에 담으면, 들어갈 때는 가운데 정렬로 보이고
+        // 넘칠 때만 스크롤이 생긴다 (`DisconnectedView` 가 스크롤을 쓰는 것과 같은 이유).
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 12) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 46, weight: .light))
+                        .foregroundStyle(.tertiary)
+
+                    Text("실행 중인 타이머 없음")
+                        .font(.title3.weight(.semibold))
+
+                    Text("아래에서 시간을 골라 시작하세요")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    PresetRow()
+                        .padding(.top, 8)
+                }
+                .multilineTextAlignment(.center)
+                // 글자를 키우면 안내 문구가 두 줄로 흐른다. 잘리지 않게 세로로 늘어나도록 둔다.
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity, minHeight: geo.size.height - 48)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 }
@@ -229,6 +264,11 @@ struct DisconnectedView: View {
 struct PresetRow: View {
     @EnvironmentObject private var client: RemoteClient
 
+    /// 버튼 하나가 글자를 자르지 않고 담을 수 있는 최소 폭.
+    /// `@ScaledMetric` 이라 글자 크기 설정을 따라 같이 커진다 — 이게 핵심이다.
+    /// 고정값이면 큰 글자에서도 4개가 한 줄에 남아 "10분" 이 "1…" 로 잘린다.
+    @ScaledMetric(relativeTo: .subheadline) private var minButtonWidth: CGFloat = 74
+
     /// (버튼에 보일 글자, 타이머 이름, 초).
     /// 이름은 Mac 앱의 프리셋과 **같은 표기**를 쓴다 — 여기서 "5분"으로 만들면
     /// Mac 목록과 알림 센터 위젯에 "5m"과 "5분"이 섞여 보인다.
@@ -236,7 +276,12 @@ struct PresetRow: View {
         [("3분", "3m", 180), ("5분", "5m", 300), ("10분", "10m", 600), ("15분", "15m", 900)]
 
     var body: some View {
-        HStack(spacing: 8) {
+        // 들어갈 만큼만 한 줄에 놓고 나머지는 다음 줄로 접는다.
+        // 기본 글자 크기면 4개가 한 줄, 크게 키우면 2×2, 더 키우면 한 열로 내려간다.
+        // 억지로 한 줄에 맞춰 글자를 줄이면 결국 읽을 수 없게 되는데,
+        // 프리셋은 눌러야 하는 버튼이라 줄 수를 늘리더라도 읽히는 쪽이 먼저다.
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: minButtonWidth), spacing: 8)],
+                  spacing: 8) {
             ForEach(Self.presets, id: \.name) { preset in
                 Button {
                     client.send(.addPreset(seconds: preset.seconds, name: preset.name))
