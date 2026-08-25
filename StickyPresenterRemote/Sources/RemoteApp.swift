@@ -266,6 +266,7 @@ struct TimerRemoteRow: View {
             timeAndProgress
             transport
             sizePicker
+            positionPad
             secondaryActions
         }
         .padding(.vertical, 6)
@@ -384,6 +385,16 @@ struct TimerRemoteRow: View {
         )
     }
 
+    // MARK: 창 위치
+
+    private var positionPad: some View {
+        WidgetPositionPad(desktop: client.desktop,
+                          placement: timer.placement,
+                          isHidden: timer.isHidden) { x, y in
+            client.send(.moveWidget(timer.id, x: x, y: y))
+        }
+    }
+
     // MARK: 보조 동작
 
     private var secondaryActions: some View {
@@ -427,5 +438,228 @@ struct TimerRemoteRow: View {
         let h = total / 3600, m = (total % 3600) / 60, s = total % 60
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s)
                      : String(format: "%02d:%02d", m, s)
+    }
+}
+
+// MARK: - Widget Position Pad
+
+/// Mac 의 **화면 배치 전체**를 손바닥만 하게 옮겨 그린 판.
+/// 안의 사각형을 끌면 Mac 의 타이머 창이 따라 움직이고, 화면이 여러 대면 그 사이를 넘어간다.
+///
+/// 방향 버튼으로 조금씩 미는 방식도 생각했지만, 발표 중에는 "저 슬라이드를 가리니까
+/// 왼쪽 아래로" 나 "빔프로젝터 쪽으로" 같은 판단을 한 번에 끝내야 한다.
+/// 배치를 축소해 보여주고 찍게 하면 어디로 가는지 **미리 보이고**, 한 번의 드래그로 끝난다.
+///
+/// 좌표 규약은 `RemotePlacement` 와 동일 — 창 **중심**의 정규화 위치, y 는 위에서 아래로,
+/// 기준은 화면 한 대가 아니라 데스크탑 전체다.
+struct WidgetPositionPad: View {
+    let desktop: RemoteDesktop?
+    let placement: RemotePlacement?
+    let isHidden: Bool
+    let onMove: (Double, Double) -> Void
+
+    /// 드래그하는 동안에는 손가락을 따라가는 이 값이 판을 그린다.
+    /// Mac 이 보내오는 위치만 믿고 그리면 왕복 시간만큼 사각형이 뒤늦게 따라와 끈적하게 느껴진다.
+    @State private var pending: CGPoint?
+    @State private var pendingSince = Date.distantPast
+    @State private var isDragging = false
+    @State private var lastSent = Date.distantPast
+
+    /// 드래그 중 매 프레임 보내면 초당 60개가 나간다. 창 하나 옮기는 데 그만큼 필요하지 않고,
+    /// 세션이 밀리면 오히려 늦게 도착한다. 20Hz 면 눈으로는 이어져 보인다.
+    private static let sendInterval: TimeInterval = 1.0 / 20.0
+
+    /// 화면 배치를 모를 때 그릴 기본값 — 노트북 한 대 모양.
+    private var screens: [RemoteScreen] {
+        let known = desktop?.screens ?? []
+        guard known.isEmpty else { return known }
+        return [RemoteScreen(id: 0, x: 0, y: 0, width: 1, height: 1, isMain: true)]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("위치")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Text(hint)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+
+            GeometryReader { geo in
+                pad(in: geo.size)
+            }
+            // 실제 배치 비율 그대로 — 판의 구석이 데스크탑의 구석과 같은 자리를 뜻해야 한다.
+            .aspectRatio(CGFloat(desktop?.aspect ?? 16.0 / 10.0), contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: 150)
+        }
+        .onChange(of: placementPoint) { _, incoming in
+            guard !isDragging, let pending, let incoming else { return }
+            let matched = abs(incoming.x - pending.x) < 0.02 && abs(incoming.y - pending.y) < 0.02
+            // 어긋난 채로 계속 붙들고 있으면 판이 영영 틀린 자리를 그린다.
+            // Mac 이 다르게 판단했다면(창이 화면보다 커서 더 세게 잘렸다든지) 잠깐 뒤 Mac 을 따른다.
+            if matched || Date().timeIntervalSince(pendingSince) > 0.6 { self.pending = nil }
+        }
+    }
+
+    /// 화면이 여러 대일 때는 지금 어느 화면에 있는지가 위치보다 먼저 궁금하다.
+    private var hint: String {
+        guard placement != nil else { return "위젯 창 없음" }
+        let all = desktop?.screens ?? []
+        guard all.count > 1, let id = placement?.screenID else { return "끌어서 옮기기" }
+        return "화면 \(id + 1)/\(all.count) · 끌어서 옮기기"
+    }
+
+    // MARK: 판
+
+    private func pad(in size: CGSize) -> some View {
+        ZStack(alignment: .topLeading) {
+            // 화면 사이의 틈은 배경 없이 비워 둔다 — 배치가 그대로 보여야
+            // 어느 쪽이 빔프로젝터인지 한눈에 알아본다.
+            Color.clear
+
+            ForEach(screens) { screen in
+                screenRect(screen, in: size)
+            }
+
+            if let placement {
+                widget(placement, in: size)
+            }
+        }
+        // 사각형 위가 아니라 판 아무 데나 찍어도 그 자리로 간다 — 정확히 사각형을 짚을 필요가 없다.
+        .contentShape(Rectangle())
+        .gesture(drag(in: size))
+        .opacity(placement == nil ? 0.5 : 1)
+        .allowsHitTesting(placement != nil)
+    }
+
+    private func screenRect(_ screen: RemoteScreen, in size: CGSize) -> some View {
+        let rect = CGRect(x: CGFloat(screen.x) * size.width,
+                          y: CGFloat(screen.y) * size.height,
+                          width: CGFloat(screen.width) * size.width,
+                          height: CGFloat(screen.height) * size.height)
+        return ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.tertiarySystemFill))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color(.separator), lineWidth: 1)
+                )
+            // 메뉴 막대가 있는 화면에만 얇은 띠를 그린다.
+            // 위아래 구분이자, 어느 쪽이 주 화면인지 알려주는 표시이기도 하다.
+            if screen.isMain {
+                Rectangle()
+                    .fill(Color(.separator).opacity(0.6))
+                    .frame(height: 3)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .frame(width: rect.width, height: rect.height)
+        .offset(x: rect.minX, y: rect.minY)
+    }
+
+    private func widget(_ placement: RemotePlacement, in size: CGSize) -> some View {
+        let center = clamp(pending ?? CGPoint(x: placement.x, y: placement.y), placement)
+        // 큰 화면을 여러 대 이어 붙이면 창 비율이 아주 작아진다. 손가락으로 짚을 수는 있어야 해서
+        // 그릴 때만 최소 크기를 준다 — 자르기 계산에는 실제 비율을 그대로 쓴다(Mac 과 같은 값).
+        let w = max(20, CGFloat(placement.widthRatio) * size.width)
+        let h = max(16, CGFloat(placement.heightRatio) * size.height)
+
+        return RoundedRectangle(cornerRadius: 4)
+            // 감춰둔 위젯은 옅게 + 점선 — 지금 화면에 안 보이는 창을 옮기고 있다는 걸 알려준다.
+            .fill(Color.accentColor.opacity(isHidden ? 0.18 : 0.8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(Color.accentColor,
+                                  style: StrokeStyle(lineWidth: 1.5, dash: isHidden ? [3, 2] : []))
+            )
+            .frame(width: w, height: h)
+            .shadow(color: .black.opacity(isDragging ? 0.25 : 0), radius: 4, y: 2)
+            .scaleEffect(isDragging ? 1.08 : 1)
+            .animation(.spring(duration: 0.2), value: isDragging)
+            // 드래그 중에는 애니메이션을 걸지 않는다 — 손가락보다 늦게 따라오면 끈적하게 느껴진다.
+            .animation(isDragging ? nil : .easeOut(duration: 0.2), value: center)
+            .position(x: center.x * size.width, y: center.y * size.height)
+    }
+
+    // MARK: 제스처
+
+    private func drag(in size: CGSize) -> some Gesture {
+        // minimumDistance 0 — 톡 찍기만 해도 그 자리로 보낸다. 끌어서 옮기는 것과 같은 경로.
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                isDragging = true
+                let point = normalized(value.location, in: size)
+                pending = point
+                pendingSince = Date()
+                let now = Date()
+                guard now.timeIntervalSince(lastSent) >= Self.sendInterval else { return }
+                lastSent = now
+                onMove(Double(point.x), Double(point.y))
+            }
+            .onEnded { value in
+                isDragging = false
+                let point = normalized(value.location, in: size)
+                pending = point
+                pendingSince = Date()
+                // 마지막 자리는 스로틀과 무관하게 반드시 보낸다 —
+                // 여기서 걸러버리면 손을 뗀 위치와 창의 위치가 영영 어긋난다.
+                lastSent = Date()
+                onMove(Double(point.x), Double(point.y))
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+    }
+
+    // MARK: 좌표
+
+    private var placementPoint: CGPoint? {
+        placement.map { CGPoint(x: $0.x, y: $0.y) }
+    }
+
+    private func normalized(_ location: CGPoint, in size: CGSize) -> CGPoint {
+        guard size.width > 0, size.height > 0 else { return .zero }
+        return CGPoint(x: min(1, max(0, location.x / size.width)),
+                       y: min(1, max(0, location.y / size.height)))
+    }
+
+    /// 창이 화면 밖으로 반쯤 걸치지 않게, **가리킨 지점이 속한 화면 안으로** 자른다.
+    /// Mac 쪽(`NoteManager.moveWidget`)이 하는 것과 같은 계산이라 손을 뗀 자리와
+    /// 창이 멈추는 자리가 어긋나지 않는다. 데스크탑 전체로 자르면 화면 사이 빈 구석에
+    /// 창을 놓게 되어 아무 화면에도 안 보이게 된다.
+    private func clamp(_ point: CGPoint, _ placement: RemotePlacement) -> CGPoint {
+        guard let screen = screen(nearest: point) else { return point }
+        let halfW = CGFloat(placement.widthRatio) / 2
+        let halfH = CGFloat(placement.heightRatio) / 2
+        let minX = CGFloat(screen.x) + halfW
+        let maxX = CGFloat(screen.x + screen.width) - halfW
+        let minY = CGFloat(screen.y) + halfH
+        let maxY = CGFloat(screen.y + screen.height) - halfH
+        // 창이 화면보다 크면 min 이 max 를 넘어선다. 그때는 왼쪽 위에 붙인다 (Mac 과 동일).
+        return CGPoint(x: min(max(point.x, minX), max(minX, maxX)),
+                       y: min(max(point.y, minY), max(minY, maxY)))
+    }
+
+    /// 그 점을 품은 화면. 배치에 따라 어느 화면에도 속하지 않는 틈이 생기므로,
+    /// 없으면 가장 가까운 화면을 고른다 (Mac 의 `ScreenMap.screen(nearest:)` 와 같은 규칙).
+    private func screen(nearest point: CGPoint) -> RemoteScreen? {
+        let all = screens
+        if let hit = all.first(where: { rect(of: $0).contains(point) }) { return hit }
+        return all.min { distance(point, rect(of: $0)) < distance(point, rect(of: $1)) }
+    }
+
+    private func rect(of screen: RemoteScreen) -> CGRect {
+        CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
+    }
+
+    private func distance(_ point: CGPoint, _ rect: CGRect) -> CGFloat {
+        // 정규화 좌표는 가로·세로를 각각 데스크탑 폭·높이로 나눈 값이라 눈금이 서로 다르다.
+        // 가로에 비율을 곱해 실제 거리 비로 되돌린 뒤 비교해야 Mac(`ScreenMap.screen(nearest:)`)과
+        // **같은 화면**을 고른다. 안 맞추면 화면 사이 틈에 놓았을 때 판과 창이 다른 화면을 가리킨다.
+        let aspect = CGFloat(desktop?.aspect ?? 1)
+        let dx = max(rect.minX - point.x, 0, point.x - rect.maxX) * aspect
+        let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
+        return dx * dx + dy * dy      // 비교만 하므로 제곱근은 생략
     }
 }

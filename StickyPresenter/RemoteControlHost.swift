@@ -82,11 +82,38 @@ final class RemoteControlHost: NSObject, ObservableObject {
                 phaseTitle: entry.isPomodoro ? entry.phase.title : nil,
                 cycleNumber: entry.cycleNumber,
                 size: entry.widgetSize.rawValue,
-                theme: entry.theme.rawValue
+                theme: entry.theme.rawValue,
+                placement: placement(of: entry.widgetPanel)
             )
         }
-        let packet = RemotePacket.state(RemoteState(hostName: peerID.displayName, timers: timers))
+        let packet = RemotePacket.state(
+            RemoteState(hostName: peerID.displayName, timers: timers, desktop: ScreenMap.desktop())
+        )
         send(packet, to: session.connectedPeers)
+    }
+
+    /// 위젯 창의 위치를 리모컨이 그릴 수 있는 정규화 값으로 옮겨 담는다.
+    /// 기준계는 `ScreenMap` — 명령을 적용하는 `NoteManager.moveWidget` 과 **같은 곳**을 쓴다.
+    /// 그래야 리모컨에서 놓은 자리와 창이 멈추는 자리가 맞는다.
+    private func placement(of panel: NSWindow?) -> RemotePlacement? {
+        guard let panel else { return nil }
+        let bounds = ScreenMap.desktopBounds()
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+
+        let frame = panel.frame
+        let x = (frame.midX - bounds.minX) / bounds.width
+        // AppKit 은 y 가 위로 자란다. 규약대로 위에서 아래로 뒤집어 보낸다.
+        let y = (bounds.maxY - frame.midY) / bounds.height
+        let screenID = NSScreen.screens.firstIndex(where: { $0 == panel.screen }) ?? 0
+
+        // 창이 데스크탑 밖으로 나가 있어도 판 안에는 그려져야 한다 (되찾을 수 있게).
+        return RemotePlacement(
+            x: Double(max(0, min(1, x))),
+            y: Double(max(0, min(1, y))),
+            widthRatio: Double(min(1, frame.width / bounds.width)),
+            heightRatio: Double(min(1, frame.height / bounds.height)),
+            screenID: screenID
+        )
     }
 
     private func send(_ packet: RemotePacket, to peers: [MCPeerID]) {
@@ -138,6 +165,10 @@ final class RemoteControlHost: NSObject, ObservableObject {
         case .align(let id):
             guard let e = entry(id) else { return }
             manager.snapWidgetToPanel(for: e)
+
+        case .moveWidget(let id, let x, let y):
+            guard let e = entry(id) else { return }
+            manager.moveWidget(for: e, normalizedX: CGFloat(x), normalizedY: CGFloat(y))
 
         case .remove(let id):
             guard let e = entry(id) else { return }

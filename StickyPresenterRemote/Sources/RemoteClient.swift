@@ -28,6 +28,8 @@ final class RemoteClient: NSObject, ObservableObject {
 
     @Published private(set) var status: Status = .searching
     @Published private(set) var timers: [RemoteTimer] = []
+    /// Mac 의 화면 배치 — 위치 판을 실제 배치(확장 디스플레이 포함) 그대로 그리는 데 쓴다.
+    @Published private(set) var desktop: RemoteDesktop?
 
     var isConnected: Bool {
         if case .connected = status { return true }
@@ -63,6 +65,7 @@ final class RemoteClient: NSObject, ObservableObject {
         session?.disconnect(); session = nil
         invited.removeAll()
         timers = []
+        desktop = nil
         status = .searching
     }
 
@@ -94,6 +97,7 @@ extension RemoteClient: MCNearbyServiceBrowserDelegate {
             self.invited.remove(peerID)
             if self.session?.connectedPeers.isEmpty ?? true {
                 self.timers = []
+                self.desktop = nil
                 self.status = .searching
             }
         }
@@ -122,6 +126,7 @@ extension RemoteClient: MCSessionDelegate {
                 self.invited.remove(peerID)
                 if session.connectedPeers.isEmpty {
                     self.timers = []
+                    self.desktop = nil
                     self.status = .searching
                 }
             @unknown default:
@@ -135,6 +140,7 @@ extension RemoteClient: MCSessionDelegate {
               case .state(let state) = packet else { return }
         Task { @MainActor in
             self.timers = state.timers
+            self.desktop = state.desktop
             self.status = .connected(state.hostName)
         }
     }

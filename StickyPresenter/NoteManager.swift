@@ -1,6 +1,70 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Screen Map
+//
+// 리모컨(iOS)과 주고받는 위치 좌표를 다루는 유일한 곳.
+// **모든 화면을 감싸는 사각형**을 1×1 로 놓고 재는데, 화면 한 대를 기준으로 삼으면
+// 확장 디스플레이에서 옆 화면으로 넘어갈 방법이 없기 때문이다.
+//
+// AppKit 전역 좌표는 주 화면 왼쪽 아래가 원점이고 y 가 위로 자란다.
+// 리모컨 규약은 왼쪽 **위**가 원점이고 y 가 아래로 자란다. 그 뒤집기를 여기서만 한다 —
+// 보고하는 쪽과 적용하는 쪽이 각자 뒤집으면 부호 하나만 어긋나도 조용히 엇나간다.
+enum ScreenMap {
+
+    /// 붙어 있는 모든 화면의 `visibleFrame` 을 감싸는 사각형.
+    /// `frame` 이 아니라 `visibleFrame` 인 이유: 창을 놓을 수 있는 영역만 다루면
+    /// 메뉴 막대·Dock 뒤로 창이 숨는 자리를 리모컨에서 가리킬 수 없다.
+    static func desktopBounds() -> CGRect {
+        let frames = NSScreen.screens.map(\.visibleFrame)
+        guard let first = frames.first else { return .zero }
+        return frames.dropFirst().reduce(first) { $0.union($1) }
+    }
+
+    /// 리모컨에 보낼 화면 배치.
+    static func desktop() -> RemoteDesktop {
+        let bounds = desktopBounds()
+        guard bounds.width > 0, bounds.height > 0 else {
+            return RemoteDesktop(aspect: 16.0 / 10.0, screens: [])
+        }
+        let screens = NSScreen.screens.enumerated().map { index, screen -> RemoteScreen in
+            let f = screen.visibleFrame
+            return RemoteScreen(
+                id: index,
+                x: Double((f.minX - bounds.minX) / bounds.width),
+                // 좌상단 — AppKit 의 maxY 가 위쪽 변이다.
+                y: Double((bounds.maxY - f.maxY) / bounds.height),
+                width: Double(f.width / bounds.width),
+                height: Double(f.height / bounds.height),
+                isMain: screen == NSScreen.main
+            )
+        }
+        return RemoteDesktop(aspect: Double(bounds.width / bounds.height), screens: screens)
+    }
+
+    /// 정규화 좌표 → AppKit 전역 좌표.
+    static func point(x: CGFloat, y: CGFloat) -> CGPoint {
+        let bounds = desktopBounds()
+        return CGPoint(x: bounds.minX + max(0, min(1, x)) * bounds.width,
+                       y: bounds.maxY - max(0, min(1, y)) * bounds.height)   // y 뒤집기
+    }
+
+    /// 그 점을 품은 화면. 화면 크기가 달라 생기는 틈에 떨어지면 가장 가까운 화면으로 보낸다 —
+    /// 배치에 따라 어느 화면에도 속하지 않는 자리가 실제로 생긴다.
+    static func screen(nearest point: CGPoint) -> NSScreen? {
+        if let hit = NSScreen.screens.first(where: { $0.visibleFrame.contains(point) }) { return hit }
+        return NSScreen.screens.min { a, b in
+            distance(from: point, to: a.visibleFrame) < distance(from: point, to: b.visibleFrame)
+        }
+    }
+
+    private static func distance(from point: CGPoint, to rect: CGRect) -> CGFloat {
+        let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
+        let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
+        return dx * dx + dy * dy      // 비교만 하므로 제곱근은 생략
+    }
+}
+
 // MARK: - Note Manager
 class NoteManager: ObservableObject {
     static let shared = NoteManager()
@@ -307,6 +371,35 @@ class NoteManager: ObservableObject {
         if entry.isWidgetHidden {
             entry.isWidgetHidden = false
         }
+    }
+
+    // MARK: - Move widget from the remote
+    /// 리모컨의 미니 화면에서 넘어온 정규화 좌표로 위젯 창을 옮긴다.
+    /// 좌표는 창의 **중심**을 가리키고, 기준은 데스크탑 전체다 (`ScreenMap`).
+    /// 다른 화면 영역을 가리키면 그 화면으로 넘어간다 — 확장 디스플레이에서
+    /// 노트북 화면과 빔프로젝터 사이를 오가는 게 이 기능의 주 용도다.
+    ///
+    /// 넘어간 뒤의 자르기는 **도착한 화면**의 `visibleFrame` 기준이다.
+    /// 데스크탑 전체 사각형으로 자르면, 화면 크기가 다를 때 생기는 빈 구석에
+    /// 창을 놓을 수 있게 되어 창이 아무 화면에도 안 보이게 된다.
+    ///
+    /// 감춰진 위젯도 자리는 옮겨 둔다 — 다시 보이게 했을 때 옮겨 놓은 곳에 뜨는 편이 자연스럽다.
+    /// 다만 `orderFront` 는 하지 않는다. 위치를 옮겼다고 감춘 창이 튀어나오면 놀란다.
+    func moveWidget(for entry: TimerEntry, normalizedX nx: CGFloat, normalizedY ny: CGFloat) {
+        guard let panel = entry.widgetPanel else { return }
+
+        let target = ScreenMap.point(x: nx, y: ny)
+        guard let screen = ScreenMap.screen(nearest: target) else { return }
+        let sf = screen.visibleFrame
+        let size = panel.frame.size
+
+        // 창 전체가 그 화면 안에 들어오도록 자른다.
+        // 창이 화면보다 크면 min 이 max 를 넘어서므로 max 를 나중에 적용해 왼쪽 위에 붙인다.
+        let x = max(sf.minX, min(target.x - size.width / 2, sf.maxX - size.width))
+        let y = max(sf.minY, min(target.y - size.height / 2, sf.maxY - size.height))
+
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        if !entry.isWidgetHidden { panel.orderFront(nil) }
     }
 
     // MARK: - Open timer in a titled window (for AirPlay / screen sharing)

@@ -14,6 +14,68 @@ public enum RemoteService {
 
 // MARK: - 상태 (Mac → iOS)
 
+// MARK: 좌표계
+//
+// 위치와 관련된 모든 값은 **데스크탑 전체**(붙어 있는 모든 화면을 감싸는 사각형)를
+// 1×1 로 놓고 잰 비율이다. 화면 한 대를 기준으로 삼으면 확장 디스플레이에서
+// 옆 화면으로 넘어갈 방법이 없어진다 — 노트북 + 빔프로젝터가 오히려 기본이라
+// 처음부터 여러 대를 담을 수 있는 기준계를 쓴다.
+//
+// y 는 **위에서 아래로** 자란다. AppKit 은 반대지만 뒤집는 일을 Mac 쪽 한 곳
+// (`ScreenMap`)에 몰아넣고, 규약 자체는 리모컨(iOS) 관례를 따른다.
+
+/// 화면 한 대의 자리. 좌표는 데스크탑 전체 사각형 안의 비율이다.
+public struct RemoteScreen: Codable, Equatable, Sendable, Identifiable {
+    /// `NSScreen.screens` 안에서의 순서. 배치를 바꾸면 달라질 수 있는 표시용 값이다.
+    public var id: Int
+    /// 화면 **좌상단**의 위치와 크기 (0…1).
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+    /// 메뉴 막대가 있는 화면. 리모컨이 위아래를 알려주는 데 쓴다.
+    public var isMain: Bool
+
+    public init(id: Int, x: Double, y: Double, width: Double, height: Double, isMain: Bool) {
+        self.id = id; self.x = x; self.y = y
+        self.width = width; self.height = height; self.isMain = isMain
+    }
+}
+
+/// Mac 의 화면 배치 전체. 리모컨은 이걸로 미니 화면 판을 실제 배치 그대로 그린다.
+public struct RemoteDesktop: Codable, Equatable, Sendable {
+    /// 전체를 감싸는 사각형의 가로/세로 비 — 판의 모양.
+    public var aspect: Double
+    /// 왼쪽 화면부터 순서대로.
+    public var screens: [RemoteScreen]
+
+    public init(aspect: Double, screens: [RemoteScreen]) {
+        self.aspect = aspect
+        self.screens = screens
+    }
+}
+
+/// 위젯 창이 데스크탑 어디에 놓여 있는지 — 리모컨의 미니 화면을 그리는 데 쓴다.
+/// 픽셀 값을 그대로 보내지 않는 이유: 리모컨은 Mac 해상도를 알 필요가 없고,
+/// 정규화해 두면 해상도가 바뀌거나 화면을 더 붙여도 판이 그대로 맞는다.
+public struct RemotePlacement: Codable, Equatable, Sendable {
+    /// 창 **중심**의 가로 위치 (0 = 데스크탑 왼쪽 끝, 1 = 오른쪽 끝).
+    public var x: Double
+    /// 창 **중심**의 세로 위치 (0 = 위, 1 = 아래).
+    public var y: Double
+    /// 창이 데스크탑 전체에서 차지하는 비율 — 판 안 사각형 크기.
+    public var widthRatio: Double
+    public var heightRatio: Double
+    /// 지금 올라가 있는 화면 (`RemoteScreen.id`). 리모컨이 "2번 화면" 이라고 알려주는 데 쓴다.
+    public var screenID: Int
+
+    public init(x: Double, y: Double, widthRatio: Double, heightRatio: Double, screenID: Int) {
+        self.x = x; self.y = y
+        self.widthRatio = widthRatio; self.heightRatio = heightRatio
+        self.screenID = screenID
+    }
+}
+
 /// 리모컨 화면에 타이머 하나를 그리는 데 필요한 값 전부.
 /// Mac 의 `TimerEntry` 를 그대로 보내지 않고 납작한 값 타입으로 옮겨 담는다 —
 /// `TimerEntry` 는 창·티커 같은 로컬 자원을 들고 있어 직렬화 대상이 아니다.
@@ -33,15 +95,20 @@ public struct RemoteTimer: Codable, Identifiable, Equatable, Sendable {
     public var size: String
     /// `WidgetTheme.rawValue` — "system" / "light" / "dark" / "chameleon"
     public var theme: String
+    /// 위젯 창의 화면상 위치. 창이 아직 없으면 nil (리모컨은 그때 위치 조작을 잠근다).
+    /// 옵셔널이라 옛 버전이 보낸 패킷에도 그대로 디코딩된다.
+    public var placement: RemotePlacement?
 
     public init(id: UUID, name: String, remaining: TimeInterval, target: TimeInterval,
                 isRunning: Bool, isFinished: Bool, isHidden: Bool, isPomodoro: Bool,
-                phaseTitle: String?, cycleNumber: Int, size: String, theme: String) {
+                phaseTitle: String?, cycleNumber: Int, size: String, theme: String,
+                placement: RemotePlacement? = nil) {
         self.id = id; self.name = name
         self.remaining = remaining; self.target = target
         self.isRunning = isRunning; self.isFinished = isFinished; self.isHidden = isHidden
         self.isPomodoro = isPomodoro; self.phaseTitle = phaseTitle; self.cycleNumber = cycleNumber
         self.size = size; self.theme = theme
+        self.placement = placement
     }
 
     public var progress: Double {
@@ -56,10 +123,14 @@ public struct RemoteTimer: Codable, Identifiable, Equatable, Sendable {
 public struct RemoteState: Codable, Sendable {
     public var hostName: String
     public var timers: [RemoteTimer]
+    /// 화면 배치. 타이머마다 같은 값이라 타이머가 아니라 상태에 한 번만 싣는다.
+    /// 옵셔널이라 이 필드를 모르는 옛 패킷도 그대로 디코딩된다.
+    public var desktop: RemoteDesktop?
 
-    public init(hostName: String, timers: [RemoteTimer]) {
+    public init(hostName: String, timers: [RemoteTimer], desktop: RemoteDesktop? = nil) {
         self.hostName = hostName
         self.timers = timers
+        self.desktop = desktop
     }
 }
 
@@ -79,6 +150,10 @@ public enum RemoteCommand: Codable, Sendable {
     case toggleHidden(UUID)
     /// 위젯을 패널 옆으로 정렬 (화면 밖으로 나갔을 때 되찾기)
     case align(UUID)
+    /// 위젯 창을 데스크탑 어디로 옮길지. 좌표 규약은 `RemotePlacement` 와 같다 —
+    /// 창 **중심**의 정규화 위치, y 는 위에서 아래로, 기준은 데스크탑 전체.
+    /// 다른 화면 영역을 가리키면 그 화면으로 넘어간다.
+    case moveWidget(UUID, x: Double, y: Double)
     case remove(UUID)
     /// 프리셋으로 새 타이머 추가 (3m/5m/10m/15m)
     case addPreset(seconds: Double, name: String)
